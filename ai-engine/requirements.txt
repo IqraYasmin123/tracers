@@ -33,6 +33,9 @@ fpdf2>=2.7.0
 # --- Demo / web app ---
 gradio>=4.25.0
 
+# --- Testing ---
+pytest>=8.0.0
+
 # --- Utilities ---
 joblib>=1.4.0
 python-dotenv>=1.0.1
