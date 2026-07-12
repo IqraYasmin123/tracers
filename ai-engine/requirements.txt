@@ -1,0 +1,38 @@
+# --- Core deep learning ---
+torch>=2.2.0
+torchvision>=0.17.0
+
+# --- Vision-Language Model ---
+transformers>=4.40.0
+ftfy>=6.2.0
+regex>=2024.4.16
+
+# --- Diffusion reconstruction ---
+diffusers>=0.27.0
+accelerate>=0.29.0
+safetensors>=0.4.2
+
+# --- Detection classifier / evaluation ---
+scikit-learn>=1.4.0
+numpy>=1.26.0
+pandas>=2.2.0
+
+# --- Image / metrics ---
+opencv-python-headless>=4.9.0
+scikit-image>=0.22.0
+lpips>=0.1.4
+Pillow>=10.3.0
+
+# --- Visualization ---
+matplotlib>=3.8.0
+plotly>=5.20.0
+
+# --- Reporting ---
+fpdf2>=2.7.0
+
+# --- Demo / web app ---
+gradio>=4.25.0
+
+# --- Utilities ---
+joblib>=1.4.0
+python-dotenv>=1.0.1

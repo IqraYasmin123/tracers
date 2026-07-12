@@ -1,0 +1,54 @@
+# --- Python / AI engine / backend ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+venv/
+.venv/
+env/
+*.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+*.pt
+*.pth
+*.safetensors
+*.joblib
+*.pkl
+
+# Large model weights & datasets — never commit these, use Drive/DVC/releases instead
+ai-engine/models/*.bin
+ai-engine/data/raw/
+ai-engine/data/processed/
+
+# --- Environment / secrets ---
+.env
+.env.*
+*.pem
+*credentials*.json
+
+# --- Node / React frontend ---
+node_modules/
+frontend/build/
+frontend/dist/
+frontend/.env.local
+
+# --- Flutter mobile ---
+mobile/build/
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/*.iml
+
+# --- Database ---
+*.sql.bak
+database/*.db
+
+# --- OS / IDE ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Logs ---
+*.log
+logs/
