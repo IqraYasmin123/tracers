@@ -6,7 +6,7 @@ the next one begins.
 | # | Module | Tier | Status |
 |---|---|---|---|
 | 1 | Project Foundation & Environment Setup | Cross-cutting | ✅ Done |
-| 2 | Vision-Language Model (VLM) Integration | AI engine | ✅ Done |
+| 2 | Vision-Language Model (VLM) Integration | AI engine | ✅ Done (incl. eager-attention fix, verified) |
 | 3 | Dataset Management | AI engine | ⬜ Next |
 | 4 | Adversarial Attack Generation | AI engine | ⬜ |
 | 5 | Adversarial Detection Engine | AI engine | ⬜ |
