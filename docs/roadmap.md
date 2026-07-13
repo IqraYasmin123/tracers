@@ -7,8 +7,8 @@ the next one begins.
 |---|---|---|---|
 | 1 | Project Foundation & Environment Setup | Cross-cutting | ✅ Done |
 | 2 | Vision-Language Model (VLM) Integration | AI engine | ✅ Done (incl. eager-attention fix, verified) |
-| 3 | Dataset Management | AI engine | ⬜ Next |
-| 4 | Adversarial Attack Generation | AI engine | ⬜ |
+| 3 | Dataset Management | AI engine | ✅ Done (14/14 tests passing) |
+| 4 | Adversarial Attack Generation | AI engine | ⬜ Next |
 | 5 | Adversarial Detection Engine | AI engine | ⬜ |
 | 6 | Attention Analysis & Heatmap Generation | AI engine | ⬜ |
 | 7 | Image Reconstruction | AI engine | ⬜ |
