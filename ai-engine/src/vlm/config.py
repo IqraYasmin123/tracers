@@ -19,6 +19,12 @@ class VLMConfig:
     model_name: str = "openai/clip-vit-base-patch32"
     device: str | None = None
     freeze_weights: bool = True
+    attn_implementation: str = "eager"
+    """Attention backend. TRACER's detection (Module 5) and attribution (Module 6) modules
+    require real per-layer attention weights, which newer `transformers` versions' default
+    "sdpa" backend silently does NOT return (it returns an empty tuple instead of raising an
+    error). "eager" is the only backend that reliably supports `output_attentions=True`, so
+    it is the required default here rather than an optional performance toggle."""
 
     def resolved_device(self) -> str:
         """Return the actual device to use, auto-detecting CUDA if none was specified."""

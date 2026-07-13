@@ -46,7 +46,17 @@ means every caller (`similarity()`, and later the detection/attribution modules)
 dot product and never has to remember to normalize themselves — a correctness guarantee baked
 into the interface rather than left as caller responsibility.
 
-### Handling `transformers` API drift
+### Why `attn_implementation="eager"` is required, not optional
+
+Newer `transformers` versions default to the `"sdpa"` (scaled dot-product attention) backend
+for speed. `sdpa` does **not** support `output_attentions=True` — it silently returns an empty
+tuple instead of real attention weights, with only a warning printed, no error raised. Since
+TRACER's entire detection (Module 5) and attribution (Module 6) methodology depends on real
+per-layer attention weights, `VLMConfig` hard-defaults to `attn_implementation="eager"`, the
+only backend that reliably exposes them. This is a core correctness requirement, not a
+performance knob — don't change this default when Modules 5–6 depend on it.
+
+
 
 Different `transformers` versions have returned `get_image_features()`/`get_text_features()` as
 either a plain `torch.Tensor` or a `ModelOutput` object (this bit us for real during Module 1's

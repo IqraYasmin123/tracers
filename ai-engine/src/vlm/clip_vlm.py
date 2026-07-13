@@ -38,7 +38,10 @@ class CLIPVLM(BaseVLM):
             logger.info(
                 "Loading CLIP model '%s' on device '%s'", self.config.model_name, self.device
             )
-            self._model = CLIPModel.from_pretrained(self.config.model_name).to(self.device)
+            self._model = CLIPModel.from_pretrained(
+                self.config.model_name,
+                attn_implementation=self.config.attn_implementation,
+            ).to(self.device)
             self._processor = CLIPProcessor.from_pretrained(self.config.model_name)
             self._model.eval()
             if self.config.freeze_weights:
