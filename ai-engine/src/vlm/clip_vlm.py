@@ -87,10 +87,13 @@ class CLIPVLM(BaseVLM):
             f"Expected a Tensor or an object with one of {tensor_attr_names}."
         )
 
-    def encode_image(self, pixel_values: torch.Tensor) -> torch.Tensor:
+    def encode_image(self, pixel_values: torch.Tensor, requires_grad: bool = False) -> torch.Tensor:
         try:
-            with torch.no_grad():
+            if requires_grad:
                 raw = self.model.get_image_features(pixel_values=pixel_values)
+            else:
+                with torch.no_grad():
+                    raw = self.model.get_image_features(pixel_values=pixel_values)
             embeds = self._extract_embeds(raw, ("pooler_output", "image_embeds"))
             return embeds / embeds.norm(dim=-1, keepdim=True)
         except VLMInferenceError:
@@ -98,13 +101,16 @@ class CLIPVLM(BaseVLM):
         except Exception as exc:
             raise VLMInferenceError(f"Image encoding failed: {exc}") from exc
 
-    def encode_text(self, texts: list[str]) -> torch.Tensor:
+    def encode_text(self, texts: list[str], requires_grad: bool = False) -> torch.Tensor:
         try:
             inputs = self.processor(text=texts, return_tensors="pt", padding=True).to(
                 self.device
             )
-            with torch.no_grad():
+            if requires_grad:
                 raw = self.model.get_text_features(**inputs)
+            else:
+                with torch.no_grad():
+                    raw = self.model.get_text_features(**inputs)
             embeds = self._extract_embeds(raw, ("pooler_output", "text_embeds"))
             return embeds / embeds.norm(dim=-1, keepdim=True)
         except VLMInferenceError:

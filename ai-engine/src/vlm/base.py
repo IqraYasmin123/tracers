@@ -24,12 +24,17 @@ class BaseVLM(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def encode_image(self, pixel_values: torch.Tensor) -> torch.Tensor:
-        """Return an L2-normalized image embedding tensor of shape [batch, embed_dim]."""
+    def encode_image(self, pixel_values: torch.Tensor, requires_grad: bool = False) -> torch.Tensor:
+        """Return an L2-normalized image embedding tensor of shape [batch, embed_dim].
+
+        requires_grad: if True, gradients flow back to pixel_values (needed by attacks in
+            Module 4 and attribution in Module 6). Defaults to False for the common
+            inference-only case (detection reads embeddings but never backprops into them).
+        """
         raise NotImplementedError
 
     @abstractmethod
-    def encode_text(self, texts: list[str]) -> torch.Tensor:
+    def encode_text(self, texts: list[str], requires_grad: bool = False) -> torch.Tensor:
         """Return an L2-normalized text embedding tensor of shape [batch, embed_dim]."""
         raise NotImplementedError
 
