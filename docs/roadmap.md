@@ -10,8 +10,8 @@ the next one begins.
 | 3 | Dataset Management | AI engine | ✅ Done (14/14 tests passing) |
 | 4 | Adversarial Attack Generation | AI engine | ✅ Done (11/11 tests, real PGD verified: 0.312→0.008 similarity) |
 | 5 | Adversarial Detection Engine | AI engine | ✅ Done (12/12 tests; real results: binary 86% acc / 0.95 AUC, attack-type 74% acc) |
-| 6 | Attention Analysis & Heatmap Generation | AI engine | ⬜ Next |
-| 7 | Image Reconstruction | AI engine | ⬜ |
+| 6 | Attention Analysis & Heatmap Generation | AI engine | ✅ Done (10/10 tests passing) |
+| 7 | Image Reconstruction | AI engine | ⬜ Next |
 | 8 | Explainable AI (XAI) | AI engine | ⬜ |
 | 9 | FastAPI Backend | API layer | ⬜ |
 | 10 | Database Design | Data layer | ⬜ |
