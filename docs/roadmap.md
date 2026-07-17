@@ -12,8 +12,8 @@ the next one begins.
 | 5 | Adversarial Detection Engine | AI engine | ✅ Done (12/12 tests; real results: binary 86% acc / 0.95 AUC, attack-type 74% acc) |
 | 6 | Attention Analysis & Heatmap Generation | AI engine | ✅ Done (10/10 tests; real heatmaps verified — attention map showed new spurious hotspot under PGD attack) |
 | 7 | Image Reconstruction | AI engine | ✅ Done (14/14 tests; real ablation: inpainting doesn't improve fidelity vs. no-reconstruction baseline for imperceptible attacks — architectural limitation, see docs) |
-| 8 | Explainable AI (XAI) | AI engine | ⬜ Next |
-| 9 | FastAPI Backend | API layer | ⬜ |
+| 8 | Explainable AI (XAI) | AI engine | ✅ Done (20/20 tests passing — AI engine complete) |
+| 9 | FastAPI Backend | API layer | ⬜ Next |
 | 10 | Database Design | Data layer | ⬜ |
 | 11 | Desktop Dashboard (React) | Client layer | ⬜ |
 | 12 | Analytics Dashboard | Client layer | ⬜ |
