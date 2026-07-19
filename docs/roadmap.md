@@ -14,8 +14,8 @@ the next one begins.
 | 7 | Image Reconstruction | AI engine | ✅ Done (14/14 tests; real ablation: inpainting doesn't improve fidelity vs. no-reconstruction baseline for imperceptible attacks — architectural limitation, see docs) |
 | 8 | Explainable AI (XAI) | AI engine | ✅ Done (20/20 tests, 0.34s; real capstone explanation generated and verified — **AI ENGINE COMPLETE** ) |
 | 9 | FastAPI Backend | API layer | ✅ Done (8/8 tests, 0.07s — zero ML deps needed for tests) |
-| 10 | Database Design | Data layer | ⬜ Next |
-| 11 | Desktop Dashboard (React) | Client layer | ⬜ |
+| 10 | Database Design | Data layer | ✅ Done (11/11 tests; Alembic migration verified end-to-end) |
+| 11 | Desktop Dashboard (React) | Client layer | ⬜ Next |
 | 12 | Analytics Dashboard | Client layer | ⬜ |
 | 13 | Case Management | API + Client | ⬜ |
 | 14 | Report Generator | AI engine + API | ⬜ |

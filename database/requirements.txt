@@ -1,0 +1,12 @@
+# --- ORM and migrations ---
+SQLAlchemy>=2.0.0
+alembic>=1.13.0
+
+# --- PostgreSQL driver (needed for real Postgres; not needed for SQLite-based tests) ---
+psycopg2-binary>=2.9.9
+
+# --- Config ---
+python-dotenv>=1.0.1
+
+# --- Testing ---
+pytest>=8.0.0
