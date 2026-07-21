@@ -15,8 +15,8 @@ the next one begins.
 | 8 | Explainable AI (XAI) | AI engine | ✅ Done (20/20 tests, 0.34s; real capstone explanation generated and verified — **AI ENGINE COMPLETE** ) |
 | 9 | FastAPI Backend | API layer | ✅ Done (8/8 tests, 0.07s — zero ML deps needed for tests) |
 | 10 | Database Design | Data layer | ✅ Done (11/11 tests; Alembic migration verified end-to-end) |
-| 11 | Desktop Dashboard (React) | Client layer | ⬜ Next |
-| 12 | Analytics Dashboard | Client layer | ⬜ |
+| 11 | Desktop Dashboard (React) | Client layer | ✅ Done (29/29 tests; production build verified; Investigation page fully wired to real backend) |
+| 12 | Analytics Dashboard | Client layer | ⬜ Next |
 | 13 | Case Management | API + Client | ⬜ |
 | 14 | Report Generator | AI engine + API | ⬜ |
 | 15 | Mobile Application (Flutter) | Client layer | ⬜ |
