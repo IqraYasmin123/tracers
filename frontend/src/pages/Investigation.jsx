@@ -5,8 +5,10 @@ import VerdictBadge from '../components/VerdictBadge'
 import HashTag from '../components/HashTag'
 import { analyzeImage, ApiError } from '../api/client'
 import { formatConfidence, formatProcessingTime } from '../utils/format'
+import { useSession } from '../context/SessionContext'
 
 export default function Investigation() {
+  const { addAnalysis } = useSession()
   const fileInputRef = useRef(null)
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
@@ -38,6 +40,13 @@ export default function Investigation() {
       const analysis = await analyzeImage(file, caption || undefined)
       setResult(analysis)
       setStatus('done')
+      // Record this real analysis for the Analytics page (Module 12). Best-effort: a
+      // recording failure (e.g. storage full) shouldn't affect the result shown here.
+      try {
+        addAnalysis(analysis, { fileName: file.name })
+      } catch {
+        // non-fatal, see comment above
+      }
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Something went wrong during analysis.'
       setErrorMessage(message)

@@ -52,15 +52,24 @@ export default function Dashboard() {
 
       <div className="mt-6 rounded-lg border border-hairline bg-panel p-6 text-center">
         <p className="font-sans text-sm text-muted">
-          Recent investigations, case statistics, and detection-timeline charts arrive with
-          Modules 12 (Analytics) and 13 (Case Management).
+          Live detection-timeline charts, threat scoring, and attack-type breakdowns are
+          available now on the Analytics page. Case statistics arrive with Module 13
+          (Case Management).
         </p>
-        <a
-          href="/investigation"
-          className="mt-3 inline-block font-mono text-sm text-cyan hover:underline"
-        >
-          Run a real analysis on the Investigation page →
-        </a>
+        <div className="mt-3 flex items-center justify-center gap-4">
+          <a
+            href="/investigation"
+            className="font-mono text-sm text-cyan hover:underline"
+          >
+            Run a real analysis on the Investigation page →
+          </a>
+          <a
+            href="/analytics"
+            className="font-mono text-sm text-cyan hover:underline"
+          >
+            View Analytics →
+          </a>
+        </div>
       </div>
     </AppLayout>
   )

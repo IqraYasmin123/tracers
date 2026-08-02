@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import Investigation from './Investigation'
 import * as apiClient from '../api/client'
+import { SessionProvider } from '../context/SessionContext'
 
 // Topbar independently calls checkHealth on mount — stub it so tests don't depend on it.
 vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'ok' })
@@ -11,7 +12,9 @@ vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'ok' })
 function renderInvestigation() {
   return render(
     <MemoryRouter>
-      <Investigation />
+      <SessionProvider>
+        <Investigation />
+      </SessionProvider>
     </MemoryRouter>
   )
 }
@@ -24,6 +27,7 @@ describe('Investigation page', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'ok' })
+    window.localStorage.clear()
   })
 
   it('disables Analyze until a file is selected', () => {
@@ -65,6 +69,40 @@ describe('Investigation page', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('A supporting detail.')).toBeInTheDocument()
     expect(screen.getByText('1.23s')).toBeInTheDocument()
+  })
+
+  it('records a completed analysis into session storage for the Analytics page', async () => {
+    vi.spyOn(apiClient, 'analyzeImage').mockResolvedValue({
+      verdict: 'clean',
+      confidence: 0.88,
+      attack_type: null,
+      attack_type_confidence: null,
+      attribution_method: 'gradient_saliency',
+      attribution_heatmap_png_base64: null,
+      explanation_summary: 'This image was classified as CLEAN with 88.0% confidence.',
+      explanation_details: [],
+      sha256_hash: 'feedface'.repeat(8),
+      processing_time_ms: 500,
+    })
+
+    renderInvestigation()
+    const user = userEvent.setup()
+
+    const fileInput = document.querySelector('input[type="file"]')
+    await user.upload(fileInput, makeFile())
+    await user.click(screen.getByRole('button', { name: /analyze image/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('clean')).toBeInTheDocument()
+    })
+
+    const stored = JSON.parse(window.localStorage.getItem('tracer.sessions.v1'))
+    expect(stored).toHaveLength(1)
+    expect(stored[0]).toMatchObject({
+      verdict: 'clean',
+      confidence: 0.88,
+      fileName: 'evidence.png',
+    })
   })
 
   it('displays a clear error message when the backend is unavailable', async () => {

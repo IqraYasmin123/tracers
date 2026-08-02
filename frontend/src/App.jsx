@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Investigation from './pages/Investigation'
+import Analytics from './pages/Analytics'
 import Settings from './pages/Settings'
 
 export default function App() {
@@ -11,6 +12,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/investigation" element={<Investigation />} />
+      <Route path="/analytics" element={<Analytics />} />
       <Route path="/settings" element={<Settings />} />
     </Routes>
   )
