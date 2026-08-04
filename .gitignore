@@ -44,6 +44,10 @@ mobile/*.iml
 database/*.db
 tracer_dev.db
 
+# --- Evidence files persisted by Module 13 (Case Management) — real uploaded images,
+# never test fixtures or code, never committed ---
+backend/data/evidence/
+
 # --- OS / IDE ---
 .DS_Store
 Thumbs.db

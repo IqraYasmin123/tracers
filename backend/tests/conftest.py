@@ -10,9 +10,14 @@ import io
 import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
+from app.db import get_db
 from app.dependencies import get_pipeline_service
 from app.main import app
+from database.models import Base
 
 
 class FakePipelineService:
@@ -42,16 +47,41 @@ class FailingPipelineService:
 
 
 @pytest.fixture
-def client():
+def test_db_session():
+    """A fresh in-memory SQLite database per test. StaticPool keeps the same connection
+    alive across the multiple get_db() calls one request can trigger (FastAPI's TestClient
+    otherwise opens a new, empty in-memory database per connection)."""
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    TestSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+    def override_get_db():
+        db = TestSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    yield override_get_db
+
+
+@pytest.fixture
+def client(test_db_session):
     app.dependency_overrides[get_pipeline_service] = lambda: FakePipelineService()
+    app.dependency_overrides[get_db] = test_db_session
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def failing_client():
+def failing_client(test_db_session):
     app.dependency_overrides[get_pipeline_service] = lambda: FailingPipelineService()
+    app.dependency_overrides[get_db] = test_db_session
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()

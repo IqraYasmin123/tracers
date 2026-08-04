@@ -1,23 +1,43 @@
 import { useEffect, useState } from 'react'
 import AppLayout from '../components/layout/AppLayout'
-import { checkHealth } from '../api/client'
-
-const PLACEHOLDER_STATS = [
-  { label: 'Total Cases', value: '—', note: 'Arrives with Module 13' },
-  { label: 'Attacks Detected', value: '—', note: 'Arrives with Module 13' },
-  { label: 'Clean Images', value: '—', note: 'Arrives with Module 13' },
-  { label: 'Avg. Confidence', value: '—', note: 'Arrives with Module 12' },
-]
+import { checkHealth, getCaseStats } from '../api/client'
+import { formatConfidence } from '../utils/format'
 
 export default function Dashboard() {
   const [health, setHealth] = useState(null)
   const [healthError, setHealthError] = useState(null)
+  const [caseStats, setCaseStats] = useState(null)
+  const [caseStatsError, setCaseStatsError] = useState(null)
 
   useEffect(() => {
     checkHealth()
       .then(setHealth)
       .catch((err) => setHealthError(err.message))
   }, [])
+
+  useEffect(() => {
+    getCaseStats()
+      .then(setCaseStats)
+      .catch((err) => setCaseStatsError(err.message))
+  }, [])
+
+  const stats = caseStats
+    ? [
+        { label: 'Total Cases', value: caseStats.total_cases, note: 'live' },
+        { label: 'Attacks Detected', value: caseStats.adversarial_verdicts, note: 'live' },
+        { label: 'Clean Images', value: caseStats.clean_verdicts, note: 'live' },
+        {
+          label: 'Avg. Confidence',
+          value: caseStats.avg_confidence !== null ? formatConfidence(caseStats.avg_confidence) : '—',
+          note: 'across all evidence',
+        },
+      ]
+    : [
+        { label: 'Total Cases', value: '—', note: caseStatsError || 'Loading…' },
+        { label: 'Attacks Detected', value: '—', note: caseStatsError || 'Loading…' },
+        { label: 'Clean Images', value: '—', note: caseStatsError || 'Loading…' },
+        { label: 'Avg. Confidence', value: '—', note: caseStatsError || 'Loading…' },
+      ]
 
   return (
     <AppLayout title="Dashboard">
@@ -41,9 +61,9 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        {PLACEHOLDER_STATS.map((stat) => (
+        {stats.map((stat) => (
           <div key={stat.label} className="rounded-lg border border-hairline bg-panel p-4">
-            <div className="font-mono text-2xl font-semibold text-muted">{stat.value}</div>
+            <div className="font-mono text-2xl font-semibold text-ink">{stat.value}</div>
             <div className="mt-1 font-sans text-sm text-ink">{stat.label}</div>
             <div className="mt-1 font-mono text-[11px] text-muted">{stat.note}</div>
           </div>
@@ -52,11 +72,10 @@ export default function Dashboard() {
 
       <div className="mt-6 rounded-lg border border-hairline bg-panel p-6 text-center">
         <p className="font-sans text-sm text-muted">
-          Live detection-timeline charts, threat scoring, and attack-type breakdowns are
-          available now on the Analytics page. Case statistics arrive with Module 13
-          (Case Management).
+          Live detection-timeline charts, threat scoring, and attack-type breakdowns are on
+          the Analytics page. Manage investigations and attach evidence on the Cases page.
         </p>
-        <div className="mt-3 flex items-center justify-center gap-4">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-4">
           <a
             href="/investigation"
             className="font-mono text-sm text-cyan hover:underline"
@@ -68,6 +87,12 @@ export default function Dashboard() {
             className="font-mono text-sm text-cyan hover:underline"
           >
             View Analytics →
+          </a>
+          <a
+            href="/cases"
+            className="font-mono text-sm text-cyan hover:underline"
+          >
+            View Cases →
           </a>
         </div>
       </div>

@@ -32,5 +32,15 @@ class Settings:
 
     max_upload_size_mb: int = int(os.getenv("MAX_UPLOAD_SIZE_MB", "10"))
 
+    # Path to the repo root's `database` package (sibling to backend/ and ai-engine/), so
+    # `database.connection` / `database.models` become importable — same pattern as
+    # ai_engine_path above.
+    database_package_path: str = os.getenv("DATABASE_PACKAGE_PATH", "..")
+
+    # Where uploaded evidence images are saved on disk once attached to a case (Module 13).
+    # Module 9's stateless /analyze never persists anything; this only applies to
+    # /cases/{id}/evidence, which does.
+    evidence_storage_dir: str = os.getenv("EVIDENCE_STORAGE_DIR", "./data/evidence")
+
 
 settings = Settings()

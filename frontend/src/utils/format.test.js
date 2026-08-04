@@ -5,6 +5,9 @@ import {
   verdictToColorClass,
   verdictToBgClass,
   formatProcessingTime,
+  formatCaseStatus,
+  caseStatusToColorClass,
+  caseStatusToBgClass,
 } from './format'
 
 describe('formatConfidence', () => {
@@ -77,5 +80,41 @@ describe('formatProcessingTime', () => {
 
   it('returns an em-dash for non-numeric input', () => {
     expect(formatProcessingTime('not a number')).toBe('—')
+  })
+})
+
+describe('formatCaseStatus', () => {
+  it('title-cases single-word statuses', () => {
+    expect(formatCaseStatus('open')).toBe('Open')
+    expect(formatCaseStatus('closed')).toBe('Closed')
+  })
+
+  it('splits and title-cases underscore-separated statuses', () => {
+    expect(formatCaseStatus('in_progress')).toBe('In Progress')
+  })
+
+  it('returns "Unknown" for empty input', () => {
+    expect(formatCaseStatus(null)).toBe('Unknown')
+    expect(formatCaseStatus(undefined)).toBe('Unknown')
+  })
+})
+
+describe('caseStatusToColorClass', () => {
+  it('maps each known status to a distinct color token', () => {
+    expect(caseStatusToColorClass('open')).toBe('text-cyan')
+    expect(caseStatusToColorClass('in_progress')).toBe('text-verdict-warning')
+    expect(caseStatusToColorClass('closed')).toBe('text-verdict-clean')
+    expect(caseStatusToColorClass('archived')).toBe('text-muted')
+  })
+
+  it('falls back to muted for unknown statuses', () => {
+    expect(caseStatusToColorClass('made-up-status')).toBe('text-muted')
+  })
+})
+
+describe('caseStatusToBgClass', () => {
+  it('returns a background class containing the matching status color', () => {
+    expect(caseStatusToBgClass('open')).toContain('cyan')
+    expect(caseStatusToBgClass('closed')).toContain('verdict-clean')
   })
 })

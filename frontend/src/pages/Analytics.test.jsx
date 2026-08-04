@@ -7,6 +7,17 @@ import { SessionProvider } from '../context/SessionContext'
 import * as apiClient from '../api/client'
 
 vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'ok' })
+vi.spyOn(apiClient, 'getCaseStats').mockResolvedValue({
+  total_cases: 3,
+  open_cases: 2,
+  in_progress_cases: 1,
+  closed_cases: 0,
+  archived_cases: 0,
+  total_evidence: 5,
+  clean_verdicts: 3,
+  adversarial_verdicts: 2,
+  avg_confidence: 0.81,
+})
 
 function renderAnalytics() {
   return render(
@@ -26,6 +37,17 @@ describe('Analytics page', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'ok' })
+    vi.spyOn(apiClient, 'getCaseStats').mockResolvedValue({
+      total_cases: 3,
+      open_cases: 2,
+      in_progress_cases: 1,
+      closed_cases: 0,
+      archived_cases: 0,
+      total_evidence: 5,
+      clean_verdicts: 3,
+      adversarial_verdicts: 2,
+      avg_confidence: 0.81,
+    })
     window.localStorage.clear()
   })
 
@@ -43,9 +65,11 @@ describe('Analytics page', () => {
     expect(screen.getByText('0.95')).toBeInTheDocument()
   })
 
-  it('always shows the honest placeholders for Modules 13 and 9', () => {
+  it('shows real case statistics from the backend, and the remaining honest placeholder', async () => {
     renderAnalytics()
-    expect(screen.getByText('Arrives with Module 13 (Case Management)')).toBeInTheDocument()
+    expect(await screen.findByText('Total Cases')).toBeInTheDocument()
+    expect(screen.getByText('Total Cases').parentElement).toHaveTextContent('3')
+    expect(screen.getByText('Evidence Files').parentElement).toHaveTextContent('5')
     expect(screen.getByText(/module 9's deferred async job queue/i)).toBeInTheDocument()
   })
 

@@ -46,3 +46,45 @@ export function formatProcessingTime(ms) {
   if (ms >= 1000) return `${(ms / 1000).toFixed(2)}s`
   return `${Math.round(ms)}ms`
 }
+
+/** "in_progress" -> "In Progress" (Module 13 case statuses) */
+export function formatCaseStatus(status) {
+  if (!status) return 'Unknown'
+  return status
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+/** Reuses the existing design tokens rather than introducing new ones: cyan for active/new,
+ * amber (verdict-warning) for in-progress, green (verdict-clean) for resolved, muted grey
+ * for archived. */
+export function caseStatusToColorClass(status) {
+  switch (status) {
+    case 'open':
+      return 'text-cyan'
+    case 'in_progress':
+      return 'text-verdict-warning'
+    case 'closed':
+      return 'text-verdict-clean'
+    case 'archived':
+      return 'text-muted'
+    default:
+      return 'text-muted'
+  }
+}
+
+export function caseStatusToBgClass(status) {
+  switch (status) {
+    case 'open':
+      return 'bg-cyan/10 border-cyan/30'
+    case 'in_progress':
+      return 'bg-verdict-warning/10 border-verdict-warning/30'
+    case 'closed':
+      return 'bg-verdict-clean/10 border-verdict-clean/30'
+    case 'archived':
+      return 'bg-panel border-hairline'
+    default:
+      return 'bg-panel border-hairline'
+  }
+}

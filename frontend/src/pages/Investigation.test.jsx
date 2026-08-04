@@ -121,4 +121,86 @@ describe('Investigation page', () => {
       expect(screen.getByText('No trained detector available.')).toBeInTheDocument()
     })
   })
+
+  describe('Save to Case (Module 13)', () => {
+    async function runAnalysisToCompletion(user) {
+      vi.spyOn(apiClient, 'analyzeImage').mockResolvedValue({
+        verdict: 'clean',
+        confidence: 0.88,
+        attack_type: null,
+        attack_type_confidence: null,
+        attribution_method: 'gradient_saliency',
+        attribution_heatmap_png_base64: null,
+        explanation_summary: 'This image was classified as CLEAN with 88.0% confidence.',
+        explanation_details: [],
+        sha256_hash: 'feedface'.repeat(8),
+        processing_time_ms: 500,
+      })
+      const fileInput = document.querySelector('input[type="file"]')
+      await user.upload(fileInput, makeFile())
+      await user.click(screen.getByRole('button', { name: /analyze image/i }))
+      await waitFor(() => expect(screen.getByText('clean')).toBeInTheDocument())
+    }
+
+    it('saves the analyzed image to an existing case', async () => {
+      vi.spyOn(apiClient, 'listCases').mockResolvedValue([
+        { id: 'case-1', case_number: 'CASE-AAAA1111', title: 'Existing case', evidence_count: 0 },
+      ])
+      const attachSpy = vi.spyOn(apiClient, 'attachEvidenceToCase').mockResolvedValue({
+        id: 'evidence-1',
+        ai_result: { verdict: 'clean' },
+      })
+
+      renderInvestigation()
+      const user = userEvent.setup()
+      await runAnalysisToCompletion(user)
+
+      await user.click(screen.getByRole('button', { name: /save to case/i }))
+      await screen.findByText('CASE-AAAA1111 · Existing case')
+      await user.selectOptions(screen.getByLabelText('Existing case'), 'case-1')
+      await user.click(screen.getByRole('button', { name: 'Save' }))
+
+      await waitFor(() => expect(attachSpy).toHaveBeenCalledWith('case-1', expect.any(File), undefined))
+      expect(await screen.findByText('Saved to "Existing case".')).toBeInTheDocument()
+    })
+
+    it('creates a new case and saves the analyzed image to it', async () => {
+      vi.spyOn(apiClient, 'listCases').mockResolvedValue([])
+      const createCaseSpy = vi
+        .spyOn(apiClient, 'createCase')
+        .mockResolvedValue({ id: 'new-case', title: 'Brand new case' })
+      const attachSpy = vi.spyOn(apiClient, 'attachEvidenceToCase').mockResolvedValue({
+        id: 'evidence-1',
+        ai_result: { verdict: 'clean' },
+      })
+
+      renderInvestigation()
+      const user = userEvent.setup()
+      await runAnalysisToCompletion(user)
+
+      await user.click(screen.getByRole('button', { name: /save to case/i }))
+      await user.type(await screen.findByLabelText('New case title'), 'Brand new case')
+      await user.click(screen.getByRole('button', { name: 'Save' }))
+
+      await waitFor(() =>
+        expect(createCaseSpy).toHaveBeenCalledWith({ title: 'Brand new case' })
+      )
+      expect(attachSpy).toHaveBeenCalledWith('new-case', expect.any(File), undefined)
+      expect(await screen.findByText('Saved to "Brand new case".')).toBeInTheDocument()
+    })
+
+    it('shows a validation message when saving without an existing case or a new title', async () => {
+      vi.spyOn(apiClient, 'listCases').mockResolvedValue([])
+      renderInvestigation()
+      const user = userEvent.setup()
+      await runAnalysisToCompletion(user)
+
+      await user.click(screen.getByRole('button', { name: /save to case/i }))
+      await user.click(screen.getByRole('button', { name: 'Save' }))
+
+      expect(
+        await screen.findByText('Pick an existing case, or enter a title to create a new one.')
+      ).toBeInTheDocument()
+    })
+  })
 })

@@ -4,6 +4,7 @@ const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', icon: '▦' },
   { to: '/investigation', label: 'Investigation', icon: '⌕' },
   { to: '/analytics', label: 'Analytics', icon: '▤' },
+  { to: '/cases', label: 'Cases', icon: '🗂' },
   { to: '/settings', label: 'Settings', icon: '⚙' },
 ]
 

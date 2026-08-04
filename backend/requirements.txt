@@ -6,6 +6,9 @@ python-multipart>=0.0.9
 # --- Config ---
 python-dotenv>=1.0.1
 
+# --- Database (Module 13 wires database/connection.py + database/models.py in directly) ---
+SQLAlchemy>=2.0.0
+
 # --- Testing ---
 pytest>=8.0.0
 httpx>=0.27.0

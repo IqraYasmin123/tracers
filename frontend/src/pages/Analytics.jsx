@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import AppLayout from '../components/layout/AppLayout'
 import ConfidenceTimelineChart from '../components/charts/ConfidenceTimelineChart'
 import AttackTypeBarChart from '../components/charts/AttackTypeBarChart'
 import ThreatGauge from '../components/charts/ThreatGauge'
 import HeatmapGallery from '../components/charts/HeatmapGallery'
 import { useSession } from '../context/SessionContext'
+import { getCaseStats } from '../api/client'
 import { formatConfidence, formatProcessingTime } from '../utils/format'
 import {
   computeVerdictCounts,
@@ -54,6 +55,18 @@ function Panel({ title, subtitle, children }) {
 export default function Analytics() {
   const { sessions, clearSessions } = useSession()
   const [confirmingClear, setConfirmingClear] = useState(false)
+
+  // Case Statistics (Module 13) — real, but scoped to every case/evidence in the database,
+  // not this browser's session. Fetched independently from the live session data above so
+  // a backend hiccup here doesn't block the (always-available) session-derived panels.
+  const [caseStats, setCaseStats] = useState(null)
+  const [caseStatsError, setCaseStatsError] = useState(null)
+
+  useEffect(() => {
+    getCaseStats()
+      .then(setCaseStats)
+      .catch((err) => setCaseStatsError(err.message))
+  }, [])
 
   const verdictCounts = computeVerdictCounts(sessions)
   const attackDistribution = computeAttackTypeDistribution(sessions)
@@ -167,10 +180,46 @@ export default function Analytics() {
       {/* Honest placeholders — same pattern as Module 11's Dashboard */}
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         <div className="rounded-lg border border-hairline bg-panel p-4">
-          <div className="font-mono text-xs uppercase tracking-wide text-muted">
-            Case Statistics
+          <div className="mb-2 flex items-baseline justify-between">
+            <div className="font-mono text-xs uppercase tracking-wide text-muted">
+              Case Statistics
+            </div>
+            <div className="font-mono text-[11px] text-muted">
+              live — every case in the database
+            </div>
           </div>
-          <div className="mt-2 font-sans text-sm text-muted">Arrives with Module 13 (Case Management)</div>
+          {caseStatsError && (
+            <p className="font-sans text-sm text-verdict-adversarial">
+              Could not load: {caseStatsError}
+            </p>
+          )}
+          {!caseStats && !caseStatsError && (
+            <p className="font-sans text-sm text-muted">Loading…</p>
+          )}
+          {caseStats && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="font-mono text-xl font-semibold text-ink">{caseStats.total_cases}</div>
+                <div className="font-sans text-xs text-muted">Total Cases</div>
+              </div>
+              <div>
+                <div className="font-mono text-xl font-semibold text-ink">{caseStats.total_evidence}</div>
+                <div className="font-sans text-xs text-muted">Evidence Files</div>
+              </div>
+              <div>
+                <div className="font-mono text-xl font-semibold text-verdict-adversarial">
+                  {caseStats.adversarial_verdicts}
+                </div>
+                <div className="font-sans text-xs text-muted">Adversarial</div>
+              </div>
+              <div>
+                <div className="font-mono text-xl font-semibold text-verdict-clean">
+                  {caseStats.clean_verdicts}
+                </div>
+                <div className="font-sans text-xs text-muted">Clean</div>
+              </div>
+            </div>
+          )}
         </div>
         <div className="rounded-lg border border-hairline bg-panel p-4">
           <div className="font-mono text-xs uppercase tracking-wide text-muted">

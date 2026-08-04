@@ -3,6 +3,8 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Investigation from './pages/Investigation'
 import Analytics from './pages/Analytics'
+import Cases from './pages/Cases'
+import CaseDetail from './pages/CaseDetail'
 import Settings from './pages/Settings'
 
 export default function App() {
@@ -13,6 +15,8 @@ export default function App() {
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/investigation" element={<Investigation />} />
       <Route path="/analytics" element={<Analytics />} />
+      <Route path="/cases" element={<Cases />} />
+      <Route path="/cases/:caseId" element={<CaseDetail />} />
       <Route path="/settings" element={<Settings />} />
     </Routes>
   )
