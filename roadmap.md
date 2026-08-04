@@ -17,7 +17,7 @@ the next one begins.
 | 10 | Database Design | Data layer | ✅ Done (11/11 tests; Alembic migration verified end-to-end) |
 | 11 | Desktop Dashboard (React) | Client layer | ✅ Done (29/29 tests; production build verified; Investigation page fully wired to real backend) |
 | 12 | Analytics Dashboard | Client layer | ✅ Done (60/60 tests; live session stats + historical Module 5 metrics + honest placeholders; found & fixed missing SessionProvider mount / unwired Investigation recording — see docs/module12_analytics.md) |
-| 13 | Case Management | API + Client | ✅ Done (24 backend + 29 new frontend tests, 90 total frontend; real cases/evidence CRUD wired to Module 10's schema; server always re-runs AI pipeline, never trusts client-reported verdicts — see docs/module13_case_management.md) |
+| 13 | Case Management | API + Client | ✅ Done (25 backend + 29 new frontend tests, 90 total frontend; real cases/evidence CRUD wired to Module 10's schema; server always re-runs AI pipeline, never trusts client-reported verdicts; fixed a real import-order bug pytest missed but uvicorn caught — see docs/module13_case_management.md) |
 | 14 | Report Generator | AI engine + API | ⬜ Next |
 | 15 | Mobile Application (Flutter) | Client layer | ⬜ |
 | 16 | Security & Authentication | API layer | ⬜ |

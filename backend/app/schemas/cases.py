@@ -6,6 +6,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from .. import db as _db  # noqa: F401  (imported first for its sys.path side effect —
+# `database` isn't importable until this runs; see app/db.py's docstring)
 from database.models import CaseStatus, Verdict
 
 

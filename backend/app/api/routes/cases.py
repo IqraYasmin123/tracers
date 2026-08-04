@@ -13,6 +13,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
+from ... import db as _db  # noqa: F401  (imported first for its sys.path side effect —
+# `database` isn't importable until this runs; see app/db.py's docstring)
 from database.models import AIResult, Case, CaseStatus, Evidence, Verdict
 
 from ...config import settings

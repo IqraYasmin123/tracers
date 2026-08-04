@@ -58,10 +58,31 @@ evidence trail is only ever as trustworthy as the model itself, not the client.
 - **Report generation** (Module 14) still needs building — `reports` table exists in the
   schema but nothing writes to it yet.
 
+## A real bug pytest couldn't catch, but real `uvicorn` immediately did
+
+`app/api/routes/cases.py` and `app/schemas/cases.py` originally imported `database.models`
+*before* `app.db` — but `app.db` is what actually patches `sys.path` so the `database`
+package becomes importable at all (see `app/db.py`'s docstring). Python executes a module's
+imports top-to-bottom, so `database.models` was being imported before anything had set up
+its path.
+
+This passed every backend test locally, because `tests/conftest.py` imports `app.db`
+directly for its own fixtures — which happens to patch `sys.path` before any test ever
+imports `cases.py`, accidentally masking the bug. It failed immediately the first time a
+real `uvicorn app.main:app --reload` process started, because uvicorn imports `app.main`
+(and therefore `cases.py`) fresh, in its own subprocess, with none of that pre-warming.
+
+Fixed by having both files import `app.db` (or `app`, for `schemas/cases.py`) first, purely
+for its `sys.path` side effect, before importing anything from `database`. Also added
+`tests/test_fresh_import.py`, which runs `python -c "from app.main import app"` in a real
+subprocess — the only way to actually exercise the same cold-import path uvicorn uses,
+rather than inheriting pytest's own already-patched `sys.path`. Verified this test fails
+against the original (buggy) import order and passes against the fix.
+
 ## Testing Strategy
 
 ```bash
-cd backend && pytest -q     # 24 tests (8 pre-existing + 16 new)
+cd backend && pytest -q     # 25 tests (8 pre-existing + 16 new + 1 fresh-import regression)
 cd frontend && npm test     # 90 tests (61 pre-existing + 29 new)
 ```
 
@@ -106,7 +127,7 @@ update on next load.
       Dashboard's summary cards — closing placeholders from Modules 11 and 12
 - [x] Temporary system-user attribution documented as temporary, with an explicit note for
       whoever builds Module 16
-- [x] 24/24 backend tests, 90/90 frontend tests, zero regressions across database/backend/
+- [x] 25/25 backend tests, 90/90 frontend tests, zero regressions across database/backend/
       frontend tiers
 - [x] Production build verified (`npm run build` succeeds)
 - [x] Evidence files and the dev SQLite database excluded via `.gitignore`
