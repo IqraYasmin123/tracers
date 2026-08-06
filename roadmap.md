@@ -18,8 +18,8 @@ the next one begins.
 | 11 | Desktop Dashboard (React) | Client layer | ✅ Done (29/29 tests; production build verified; Investigation page fully wired to real backend) |
 | 12 | Analytics Dashboard | Client layer | ✅ Done (60/60 tests; live session stats + historical Module 5 metrics + honest placeholders; found & fixed missing SessionProvider mount / unwired Investigation recording — see docs/module12_analytics.md) |
 | 13 | Case Management | API + Client | ✅ Done (25 backend + 29 new frontend tests, 90 total frontend; real cases/evidence CRUD wired to Module 10's schema; server always re-runs AI pipeline, never trusts client-reported verdicts; fixed a real import-order bug pytest missed but uvicorn caught — see docs/module13_case_management.md) |
-| 14 | Report Generator | AI engine + API | ⬜ Next |
-| 15 | Mobile Application (Flutter) | Client layer | ⬜ |
+| 14 | Report Generator | AI engine + API | ✅ Done (35 backend + 99 total frontend tests; real PDF/DOCX generation via reportlab + python-docx; fixed a Module 13 gap where attribution heatmaps were never persisted — see docs/module14_report_generator.md) |
+| 15 | Mobile Application (Flutter) | Client layer | ⬜ Next |
 | 16 | Security & Authentication | API layer | ⬜ |
 | 17 | System Testing | Cross-cutting | ⬜ |
 | 18 | Deployment & Documentation | Cross-cutting | ⬜ |

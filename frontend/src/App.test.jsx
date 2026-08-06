@@ -19,6 +19,7 @@ vi.spyOn(apiClient, 'getCaseStats').mockResolvedValue({
   avg_confidence: null,
 })
 vi.spyOn(apiClient, 'listCases').mockResolvedValue([])
+vi.spyOn(apiClient, 'listReports').mockResolvedValue([])
 
 function renderAt(path) {
   return render(

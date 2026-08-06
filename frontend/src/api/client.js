@@ -143,3 +143,43 @@ export async function getCaseStats() {
   }
   return response.json()
 }
+
+/**
+ * Report generation (Module 14). Mirrors backend/app/api/routes/reports.py.
+ */
+
+export async function listReports(caseId) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/cases/${caseId}/reports`)
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}))
+    throw new ApiError(body.detail || 'Failed to list reports', response.status)
+  }
+  return response.json()
+}
+
+export async function generateReport(caseId, format = 'pdf') {
+  let response
+  try {
+    response = await fetch(`${API_BASE_URL}/api/v1/cases/${caseId}/reports`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ format }),
+    })
+  } catch (networkError) {
+    throw new ApiError(
+      'Could not reach the TRACER backend. Is it running at ' + API_BASE_URL + '?',
+      0
+    )
+  }
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}))
+    throw new ApiError(body.detail || `Request failed with status ${response.status}`, response.status)
+  }
+  return response.json()
+}
+
+/** Returns the direct download URL — used as an <a href> rather than fetched in JS, so the
+ * browser handles the file download/save-as natively. */
+export function getReportDownloadUrl(caseId, reportId) {
+  return `${API_BASE_URL}/api/v1/cases/${caseId}/reports/${reportId}/download`
+}

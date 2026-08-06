@@ -42,5 +42,8 @@ class Settings:
     # /cases/{id}/evidence, which does.
     evidence_storage_dir: str = os.getenv("EVIDENCE_STORAGE_DIR", "./data/evidence")
 
+    # Where generated PDF/DOCX case reports are saved (Module 14).
+    report_storage_dir: str = os.getenv("REPORT_STORAGE_DIR", "./data/reports")
+
 
 settings = Settings()

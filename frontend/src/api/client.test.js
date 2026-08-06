@@ -9,6 +9,9 @@ import {
   updateCase,
   attachEvidenceToCase,
   getCaseStats,
+  listReports,
+  generateReport,
+  getReportDownloadUrl,
 } from './client'
 
 describe('checkHealth', () => {
@@ -182,5 +185,55 @@ describe('Case Management API (Module 13)', () => {
     const [url] = global.fetch.mock.calls[0]
     expect(String(url)).toContain('/api/v1/cases/stats')
     expect(result.total_cases).toBe(3)
+  })
+})
+
+describe('Report generation API (Module 14)', () => {
+  beforeEach(() => {
+    global.fetch = vi.fn()
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('listReports fetches the reports list for a case', async () => {
+    global.fetch.mockResolvedValue({ ok: true, json: async () => [] })
+    await listReports('case-1')
+    const [url] = global.fetch.mock.calls[0]
+    expect(String(url)).toContain('/api/v1/cases/case-1/reports')
+  })
+
+  it('generateReport POSTs the requested format', async () => {
+    global.fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 'report-1', format: 'docx' }),
+    })
+    const result = await generateReport('case-1', 'docx')
+
+    const [url, options] = global.fetch.mock.calls[0]
+    expect(String(url)).toContain('/api/v1/cases/case-1/reports')
+    expect(options.method).toBe('POST')
+    expect(JSON.parse(options.body)).toEqual({ format: 'docx' })
+    expect(result.format).toBe('docx')
+  })
+
+  it('generateReport defaults to pdf when no format is given', async () => {
+    global.fetch.mockResolvedValue({ ok: true, json: async () => ({ format: 'pdf' }) })
+    await generateReport('case-1')
+    const [, options] = global.fetch.mock.calls[0]
+    expect(JSON.parse(options.body)).toEqual({ format: 'pdf' })
+  })
+
+  it('generateReport throws a clear ApiError when the network request fails', async () => {
+    global.fetch.mockRejectedValue(new TypeError('Failed to fetch'))
+    await expect(generateReport('case-1', 'pdf')).rejects.toThrow(
+      /Could not reach the TRACER backend/
+    )
+  })
+
+  it('getReportDownloadUrl builds the correct download URL without fetching', () => {
+    const url = getReportDownloadUrl('case-1', 'report-1')
+    expect(url).toContain('/api/v1/cases/case-1/reports/report-1/download')
+    expect(global.fetch).not.toHaveBeenCalled()
   })
 })

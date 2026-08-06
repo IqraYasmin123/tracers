@@ -4,10 +4,16 @@ import AppLayout from '../components/layout/AppLayout'
 import CaseStatusBadge from '../components/CaseStatusBadge'
 import VerdictBadge from '../components/VerdictBadge'
 import HashTag from '../components/HashTag'
-import { getCase, updateCase } from '../api/client'
+import { getCase, updateCase, listReports, generateReport, getReportDownloadUrl } from '../api/client'
 import { formatProcessingTime } from '../utils/format'
 
 const STATUS_OPTIONS = ['open', 'in_progress', 'closed', 'archived']
+
+function formatBytes(bytes) {
+  if (typeof bytes !== 'number' || bytes <= 0) return '—'
+  if (bytes < 1024) return `${bytes} B`
+  return `${(bytes / 1024).toFixed(1)} KB`
+}
 
 export default function CaseDetail() {
   const { caseId } = useParams()
@@ -15,6 +21,22 @@ export default function CaseDetail() {
   const [status, setStatus] = useState('loading') // 'loading' | 'ready' | 'error'
   const [error, setError] = useState(null)
   const [updatingStatus, setUpdatingStatus] = useState(false)
+
+  // Reports (Module 14)
+  const [reports, setReports] = useState([])
+  const [reportsStatus, setReportsStatus] = useState('loading') // loading | ready | error
+  const [generatingFormat, setGeneratingFormat] = useState(null) // 'pdf' | 'docx' | null
+  const [generateError, setGenerateError] = useState(null)
+
+  function loadReports() {
+    setReportsStatus('loading')
+    listReports(caseId)
+      .then((data) => {
+        setReports(data)
+        setReportsStatus('ready')
+      })
+      .catch(() => setReportsStatus('error'))
+  }
 
   function load() {
     setStatus('loading')
@@ -31,8 +53,22 @@ export default function CaseDetail() {
 
   useEffect(() => {
     load()
+    loadReports()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseId])
+
+  async function handleGenerateReport(format) {
+    setGeneratingFormat(format)
+    setGenerateError(null)
+    try {
+      await generateReport(caseId, format)
+      loadReports()
+    } catch (err) {
+      setGenerateError(err.message)
+    } finally {
+      setGeneratingFormat(null)
+    }
+  }
 
   async function handleStatusChange(newStatus) {
     setUpdatingStatus(true)
@@ -152,6 +188,75 @@ export default function CaseDetail() {
                     <span className="font-mono text-xs text-muted">No AI result</span>
                   )}
                 </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-6">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-mono text-xs uppercase tracking-wide text-muted">
+            Reports ({reports.length})
+          </h3>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleGenerateReport('pdf')}
+              disabled={generatingFormat !== null}
+              className="rounded-md border border-cyan/50 bg-cyan/10 px-3 py-1.5 font-mono text-xs text-cyan transition-colors hover:bg-cyan/20 disabled:opacity-50"
+            >
+              {generatingFormat === 'pdf' ? 'Generating…' : '+ Generate PDF'}
+            </button>
+            <button
+              onClick={() => handleGenerateReport('docx')}
+              disabled={generatingFormat !== null}
+              className="rounded-md border border-cyan/50 bg-cyan/10 px-3 py-1.5 font-mono text-xs text-cyan transition-colors hover:bg-cyan/20 disabled:opacity-50"
+            >
+              {generatingFormat === 'docx' ? 'Generating…' : '+ Generate DOCX'}
+            </button>
+          </div>
+        </div>
+
+        {generateError && (
+          <div className="mb-3 rounded-md border border-verdict-adversarial/30 bg-verdict-adversarial/10 p-3 font-sans text-sm text-verdict-adversarial">
+            {generateError}
+          </div>
+        )}
+
+        {reportsStatus === 'loading' && (
+          <p className="font-sans text-sm text-muted">Loading reports…</p>
+        )}
+
+        {reportsStatus === 'ready' && reports.length === 0 && (
+          <div className="rounded-lg border border-hairline bg-panel p-6 text-center">
+            <p className="font-sans text-sm text-muted">
+              No reports generated yet — every report is built fresh from this case's real
+              evidence and AI results.
+            </p>
+          </div>
+        )}
+
+        {reportsStatus === 'ready' && reports.length > 0 && (
+          <div className="space-y-2">
+            {reports.map((r) => (
+              <div
+                key={r.id}
+                className="flex items-center justify-between rounded-lg border border-hairline bg-panel p-3"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="rounded-full border border-hairline bg-void px-2 py-0.5 font-mono text-[11px] uppercase text-cyan">
+                    {r.format}
+                  </span>
+                  <span className="font-mono text-[11px] text-muted">
+                    {new Date(r.created_at).toLocaleString()} · {formatBytes(r.file_size_bytes)}
+                  </span>
+                </div>
+                <a
+                  href={getReportDownloadUrl(caseId, r.id)}
+                  className="font-mono text-xs text-cyan hover:underline"
+                >
+                  Download →
+                </a>
               </div>
             ))}
           </div>

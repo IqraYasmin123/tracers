@@ -54,6 +54,7 @@ describe('CaseDetail page', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'ok' })
+    vi.spyOn(apiClient, 'listReports').mockResolvedValue([])
   })
 
   it('renders case info and its evidence', async () => {
@@ -98,5 +99,66 @@ describe('CaseDetail page', () => {
     await waitFor(() =>
       expect(updateCaseSpy).toHaveBeenCalledWith('case-1', { status: 'closed' })
     )
+  })
+
+  describe('Reports (Module 14)', () => {
+    it('shows the empty-reports state when no reports exist yet', async () => {
+      vi.spyOn(apiClient, 'getCase').mockResolvedValue(SAMPLE_CASE)
+      renderCaseDetail()
+      expect(
+        await screen.findByText(/No reports generated yet/)
+      ).toBeInTheDocument()
+    })
+
+    it('renders previously generated reports with a download link', async () => {
+      vi.spyOn(apiClient, 'getCase').mockResolvedValue(SAMPLE_CASE)
+      vi.spyOn(apiClient, 'listReports').mockResolvedValue([
+        {
+          id: 'report-1',
+          case_id: 'case-1',
+          format: 'pdf',
+          file_size_bytes: 51200,
+          created_at: '2026-01-02T00:00:00Z',
+        },
+      ])
+      renderCaseDetail()
+
+      expect(await screen.findByText('pdf')).toBeInTheDocument()
+      expect(screen.getByText(/50\.0 KB/)).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Download →' })).toHaveAttribute(
+        'href',
+        expect.stringContaining('/api/v1/cases/case-1/reports/report-1/download')
+      )
+    })
+
+    it('generates a PDF report and refreshes the report list', async () => {
+      vi.spyOn(apiClient, 'getCase').mockResolvedValue(SAMPLE_CASE)
+      const generateReportSpy = vi.spyOn(apiClient, 'generateReport').mockResolvedValue({
+        id: 'report-1',
+        case_id: 'case-1',
+        format: 'pdf',
+        file_size_bytes: 51200,
+        created_at: '2026-01-02T00:00:00Z',
+      })
+      renderCaseDetail()
+      const user = userEvent.setup()
+
+      await screen.findByText(/No reports generated yet/)
+      await user.click(screen.getByRole('button', { name: '+ Generate PDF' }))
+
+      await waitFor(() => expect(generateReportSpy).toHaveBeenCalledWith('case-1', 'pdf'))
+    })
+
+    it('shows an error message when report generation fails', async () => {
+      vi.spyOn(apiClient, 'getCase').mockResolvedValue(SAMPLE_CASE)
+      vi.spyOn(apiClient, 'generateReport').mockRejectedValue(new Error('Backend unreachable'))
+      renderCaseDetail()
+      const user = userEvent.setup()
+
+      await screen.findByText(/No reports generated yet/)
+      await user.click(screen.getByRole('button', { name: '+ Generate DOCX' }))
+
+      expect(await screen.findByText('Backend unreachable')).toBeInTheDocument()
+    })
   })
 })

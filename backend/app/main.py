@@ -13,7 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .api.routes import cases, health, inference
+from .api.routes import cases, health, inference, reports
 from .config import settings
 from .logging_config import configure_logging
 
@@ -41,6 +41,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(inference.router, prefix="/api/v1", tags=["inference"])
 app.include_router(cases.router, prefix="/api/v1", tags=["cases"])
+app.include_router(reports.router, prefix="/api/v1", tags=["reports"])
 
 
 @app.exception_handler(RuntimeError)

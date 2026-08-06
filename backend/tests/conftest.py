@@ -14,6 +14,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+import app.config as config_module
 from app.db import get_db
 from app.dependencies import get_pipeline_service
 from app.main import app
@@ -70,7 +71,11 @@ def test_db_session():
 
 
 @pytest.fixture
-def client(test_db_session):
+def client(test_db_session, tmp_path, monkeypatch):
+    # Isolate file storage to pytest's own tmp dir — otherwise every test run writes real
+    # files into backend/data/, which is gitignored but still pollutes the working copy.
+    monkeypatch.setattr(config_module.settings, "evidence_storage_dir", str(tmp_path / "evidence"))
+    monkeypatch.setattr(config_module.settings, "report_storage_dir", str(tmp_path / "reports"))
     app.dependency_overrides[get_pipeline_service] = lambda: FakePipelineService()
     app.dependency_overrides[get_db] = test_db_session
     with TestClient(app) as test_client:
@@ -79,7 +84,9 @@ def client(test_db_session):
 
 
 @pytest.fixture
-def failing_client(test_db_session):
+def failing_client(test_db_session, tmp_path, monkeypatch):
+    monkeypatch.setattr(config_module.settings, "evidence_storage_dir", str(tmp_path / "evidence"))
+    monkeypatch.setattr(config_module.settings, "report_storage_dir", str(tmp_path / "reports"))
     app.dependency_overrides[get_pipeline_service] = lambda: FailingPipelineService()
     app.dependency_overrides[get_db] = test_db_session
     with TestClient(app) as test_client:

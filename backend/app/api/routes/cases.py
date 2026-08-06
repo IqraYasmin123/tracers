@@ -5,6 +5,7 @@ doesn't try to parse the literal string "stats" as a case_id path parameter.
 """
 from __future__ import annotations
 
+import base64
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -190,6 +191,17 @@ async def attach_evidence(
     storage_path = case_dir / stored_filename
     storage_path.write_bytes(image_bytes)
 
+    # Persist the attribution heatmap too (previously only returned to the client and
+    # discarded — a real gap, since Module 14's reports need the actual image, not just
+    # the attribution_method/peak_fraction numbers).
+    heatmap_path = None
+    heatmap_b64 = result.get("attribution_heatmap_png_base64")
+    if heatmap_b64:
+        heatmap_filename = f"{uuid.uuid4().hex}_heatmap.png"
+        heatmap_full_path = case_dir / heatmap_filename
+        heatmap_full_path.write_bytes(base64.b64decode(heatmap_b64))
+        heatmap_path = str(heatmap_full_path)
+
     evidence = Evidence(
         case_id=case.id,
         original_filename=original_name,
@@ -209,6 +221,7 @@ async def attach_evidence(
         attack_type=result["attack_type"],
         attack_type_confidence=result["attack_type_confidence"],
         attribution_method=result["attribution_method"],
+        attribution_heatmap_path=heatmap_path,
         attribution_peak_fraction=result["attribution_peak_fraction"],
         explanation_summary=result["explanation_summary"],
         explanation_details=result["explanation_details"],
