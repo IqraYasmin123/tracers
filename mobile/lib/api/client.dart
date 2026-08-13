@@ -162,13 +162,15 @@ class ApiClient {
       '$baseUrl/api/v1/cases/$caseId/reports/$reportId/download';
 
   // --- internal helpers: consistent timeouts + a clear error when the backend is simply
-  // unreachable, rather than an opaque SocketException bubbling up to the UI ---
+  // unreachable, rather than an opaque SocketException bubbling up to the UI. The real
+  // exception's message is included (not swallowed) so unexpected errors stay diagnosable
+  // instead of every failure looking identical. ---
 
   Future<http.Response> _get(Uri uri) async {
     try {
       return await http.get(uri).timeout(const Duration(seconds: 15));
-    } on Exception {
-      throw ApiException('Could not reach the TRACER backend at $baseUrl.', 0);
+    } on Exception catch (e) {
+      throw ApiException('Could not reach the TRACER backend at $baseUrl. ($e)', 0);
     }
   }
 
@@ -177,16 +179,16 @@ class ApiClient {
       return await http
           .post(uri, headers: {'Content-Type': 'application/json'}, body: jsonEncode(body))
           .timeout(const Duration(seconds: 60)); // report generation can take a few seconds
-    } on Exception {
-      throw ApiException('Could not reach the TRACER backend at $baseUrl.', 0);
+    } on Exception catch (e) {
+      throw ApiException('Could not reach the TRACER backend at $baseUrl. ($e)', 0);
     }
   }
 
   Future<http.StreamedResponse> _send(http.MultipartRequest request) async {
     try {
       return await request.send().timeout(const Duration(seconds: 60));
-    } on Exception {
-      throw ApiException('Could not reach the TRACER backend at $baseUrl.', 0);
+    } on Exception catch (e) {
+      throw ApiException('Could not reach the TRACER backend at $baseUrl. ($e)', 0);
     }
   }
 }
