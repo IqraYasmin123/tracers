@@ -39,3 +39,6 @@ pytest>=8.0.0
 # --- Utilities ---
 joblib>=1.4.0
 python-dotenv>=1.0.1
+
+# --- MISc ---
+uvicorn 0.51.0

@@ -1,0 +1,44 @@
+name: tracer_mobile
+description: TRACER Mobile — digital forensics for Vision-Language Models (Module 15).
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # Networking — talks to the same FastAPI backend as the React frontend (Module 9/13/14).
+  http: ^1.2.0
+  http_parser: ^4.0.2
+
+  # Camera capture + gallery picking for the Investigation screen.
+  image_picker: ^1.1.0
+
+  # Local-only notifications (e.g. "Analysis complete"). No backend push infrastructure
+  # exists yet (no FCM tokens, no notification records in the database) — this is
+  # deliberately scoped to local notifications only, not a fake push system. See
+  # docs/module15_mobile.md.
+  flutter_local_notifications: ^17.2.2
+
+  # Lightweight local persistence for a "remember the last-used API base URL" setting —
+  # no auth token exists to store yet (Module 16), so this is the only thing that needs it.
+  shared_preferences: ^2.2.3
+
+  intl: ^0.19.0
+
+  # Opens a generated report's download URL in the device's browser/PDF viewer — simpler
+  # and more reliable than managing file-system write permissions across Android/iOS just
+  # to save a PDF/DOCX locally.
+  url_launcher: ^6.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
