@@ -35,6 +35,11 @@ dependencies:
   # to save a PDF/DOCX locally.
   url_launcher: ^6.3.0
 
+  # Hands downloaded report bytes (Module 16: now fetched with an auth header, not a bare
+  # URL — see api/client.dart's downloadReportBytes) to the OS share/save sheet. Avoids
+  # needing file-system write permissions just to let the user save or open the file.
+  share_plus: ^10.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

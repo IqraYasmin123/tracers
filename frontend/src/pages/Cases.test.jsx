@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import Cases from './Cases'
+import { AuthProvider } from '../context/AuthContext'
 import * as apiClient from '../api/client'
 
 vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'ok' })
@@ -10,7 +11,9 @@ vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'ok' })
 function renderCases() {
   return render(
     <MemoryRouter>
-      <Cases />
+      <AuthProvider>
+        <Cases />
+      </AuthProvider>
     </MemoryRouter>
   )
 }
@@ -42,6 +45,7 @@ describe('Cases page', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'ok' })
+    vi.spyOn(apiClient, 'getStoredToken').mockReturnValue(null)
   })
 
   it('shows the empty state when there are no cases', async () => {

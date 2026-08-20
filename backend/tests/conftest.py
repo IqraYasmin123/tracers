@@ -15,10 +15,11 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import app.config as config_module
+from app.auth.security import create_access_token, hash_password
 from app.db import get_db
 from app.dependencies import get_pipeline_service
 from app.main import app
-from database.models import Base
+from database.models import Base, User, UserRole
 
 
 class FakePipelineService:
@@ -70,6 +71,38 @@ def test_db_session():
     yield override_get_db
 
 
+def _make_authenticated_test_client(app_instance, get_db_override) -> TestClient:
+    """Creates a real ADMIN user directly in the test database and returns a TestClient
+    that sends its token on every request by default (as `Authorization: Bearer ...`).
+
+    Module 16 requires auth on every case/report route — tests written before Module 16
+    existed call these endpoints with no token at all. Rather than rewrite every one of
+    those tests individually, every request through this client is pre-authenticated as an
+    admin (the highest-privilege role, so no existing test's assumed permissions change).
+    Tests that specifically need to exercise 401/403/role behavior override this per-request
+    (e.g. `client.get(url, headers={})` for "no token", or build their own lower-privilege
+    token via `create_access_token` directly)."""
+    db_gen = get_db_override()
+    db = next(db_gen)
+    try:
+        user = User(
+            username="test-admin",
+            email="test-admin@tracer.local",
+            password_hash=hash_password("not-used-directly-in-tests"),
+            role=UserRole.ADMIN,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        token = create_access_token(user_id=user.id, username=user.username, role=user.role.value)
+    finally:
+        db.close()
+
+    test_client = TestClient(app_instance)
+    test_client.headers.update({"Authorization": f"Bearer {token}"})
+    return test_client
+
+
 @pytest.fixture
 def client(test_db_session, tmp_path, monkeypatch):
     # Isolate file storage to pytest's own tmp dir — otherwise every test run writes real
@@ -78,7 +111,7 @@ def client(test_db_session, tmp_path, monkeypatch):
     monkeypatch.setattr(config_module.settings, "report_storage_dir", str(tmp_path / "reports"))
     app.dependency_overrides[get_pipeline_service] = lambda: FakePipelineService()
     app.dependency_overrides[get_db] = test_db_session
-    with TestClient(app) as test_client:
+    with _make_authenticated_test_client(app, test_db_session) as test_client:
         yield test_client
     app.dependency_overrides.clear()
 
@@ -89,7 +122,7 @@ def failing_client(test_db_session, tmp_path, monkeypatch):
     monkeypatch.setattr(config_module.settings, "report_storage_dir", str(tmp_path / "reports"))
     app.dependency_overrides[get_pipeline_service] = lambda: FailingPipelineService()
     app.dependency_overrides[get_db] = test_db_session
-    with TestClient(app) as test_client:
+    with _make_authenticated_test_client(app, test_db_session) as test_client:
         yield test_client
     app.dependency_overrides.clear()
 

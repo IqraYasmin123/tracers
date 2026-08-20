@@ -4,7 +4,7 @@ import AppLayout from '../components/layout/AppLayout'
 import CaseStatusBadge from '../components/CaseStatusBadge'
 import VerdictBadge from '../components/VerdictBadge'
 import HashTag from '../components/HashTag'
-import { getCase, updateCase, listReports, generateReport, getReportDownloadUrl } from '../api/client'
+import { getCase, updateCase, listReports, generateReport, downloadReport } from '../api/client'
 import { formatProcessingTime } from '../utils/format'
 
 const STATUS_OPTIONS = ['open', 'in_progress', 'closed', 'archived']
@@ -27,6 +27,8 @@ export default function CaseDetail() {
   const [reportsStatus, setReportsStatus] = useState('loading') // loading | ready | error
   const [generatingFormat, setGeneratingFormat] = useState(null) // 'pdf' | 'docx' | null
   const [generateError, setGenerateError] = useState(null)
+  const [downloadingReportId, setDownloadingReportId] = useState(null)
+  const [downloadError, setDownloadError] = useState(null)
 
   function loadReports() {
     setReportsStatus('loading')
@@ -67,6 +69,18 @@ export default function CaseDetail() {
       setGenerateError(err.message)
     } finally {
       setGeneratingFormat(null)
+    }
+  }
+
+  async function handleDownloadReport(report) {
+    setDownloadingReportId(report.id)
+    setDownloadError(null)
+    try {
+      await downloadReport(caseId, report.id, `${caseData?.case_number || caseId}_report.${report.format}`)
+    } catch (err) {
+      setDownloadError(err.message)
+    } finally {
+      setDownloadingReportId(null)
     }
   }
 
@@ -223,6 +237,12 @@ export default function CaseDetail() {
           </div>
         )}
 
+        {downloadError && (
+          <div className="mb-3 rounded-md border border-verdict-adversarial/30 bg-verdict-adversarial/10 p-3 font-sans text-sm text-verdict-adversarial">
+            {downloadError}
+          </div>
+        )}
+
         {reportsStatus === 'loading' && (
           <p className="font-sans text-sm text-muted">Loading reports…</p>
         )}
@@ -251,12 +271,13 @@ export default function CaseDetail() {
                     {new Date(r.created_at).toLocaleString()} · {formatBytes(r.file_size_bytes)}
                   </span>
                 </div>
-                <a
-                  href={getReportDownloadUrl(caseId, r.id)}
-                  className="font-mono text-xs text-cyan hover:underline"
+                <button
+                  onClick={() => handleDownloadReport(r)}
+                  disabled={downloadingReportId === r.id}
+                  className="font-mono text-xs text-cyan hover:underline disabled:opacity-50"
                 >
-                  Download →
-                </a>
+                  {downloadingReportId === r.id ? 'Downloading…' : 'Download →'}
+                </button>
               </div>
             ))}
           </div>

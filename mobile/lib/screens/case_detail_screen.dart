@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import '../api/client.dart';
 import '../models/models.dart';
 import '../notifications/notification_service.dart';
@@ -67,12 +67,19 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
   }
 
   Future<void> _downloadReport(ReportSummary report) async {
-    final url = widget.api.reportDownloadUrl(widget.caseId, report.id);
-    final uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    try {
+      final bytes = await widget.api.downloadReportBytes(widget.caseId, report.id);
+      final filename = '${widget.caseId}_report.${report.format}';
+      final mimeType = report.format == 'pdf'
+          ? 'application/pdf'
+          : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      await Share.shareXFiles(
+        [XFile.fromData(bytes, name: filename, mimeType: mimeType)],
+      );
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Could not open the report download link.')));
+            .showSnackBar(SnackBar(content: Text('Could not download the report: $e')));
       }
     }
   }

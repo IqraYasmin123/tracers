@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import CaseDetail from './CaseDetail'
+import { AuthProvider } from '../context/AuthContext'
 import * as apiClient from '../api/client'
 
 vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'ok' })
@@ -10,9 +11,11 @@ vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'ok' })
 function renderCaseDetail(caseId = 'case-1') {
   return render(
     <MemoryRouter initialEntries={[`/cases/${caseId}`]}>
-      <Routes>
-        <Route path="/cases/:caseId" element={<CaseDetail />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/cases/:caseId" element={<CaseDetail />} />
+        </Routes>
+      </AuthProvider>
     </MemoryRouter>
   )
 }
@@ -55,6 +58,7 @@ describe('CaseDetail page', () => {
     vi.restoreAllMocks()
     vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'ok' })
     vi.spyOn(apiClient, 'listReports').mockResolvedValue([])
+    vi.spyOn(apiClient, 'getStoredToken').mockReturnValue(null)
   })
 
   it('renders case info and its evidence', async () => {
@@ -110,7 +114,7 @@ describe('CaseDetail page', () => {
       ).toBeInTheDocument()
     })
 
-    it('renders previously generated reports with a download link', async () => {
+    it('downloads a report via an authenticated fetch, not a bare link', async () => {
       vi.spyOn(apiClient, 'getCase').mockResolvedValue(SAMPLE_CASE)
       vi.spyOn(apiClient, 'listReports').mockResolvedValue([
         {
@@ -121,14 +125,43 @@ describe('CaseDetail page', () => {
           created_at: '2026-01-02T00:00:00Z',
         },
       ])
+      const downloadReportSpy = vi.spyOn(apiClient, 'downloadReport').mockResolvedValue(undefined)
       renderCaseDetail()
+      const user = userEvent.setup()
 
       expect(await screen.findByText('pdf')).toBeInTheDocument()
       expect(screen.getByText(/50\.0 KB/)).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: 'Download →' })).toHaveAttribute(
-        'href',
-        expect.stringContaining('/api/v1/cases/case-1/reports/report-1/download')
+
+      // A plain <a href> can't carry the Authorization header the download endpoint now
+      // requires (Module 16) — this must be a button that calls the authenticated
+      // downloadReport() helper, not a navigational link.
+      expect(screen.queryByRole('link', { name: /Download/ })).not.toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'Download →' }))
+
+      await waitFor(() =>
+        expect(downloadReportSpy).toHaveBeenCalledWith('case-1', 'report-1', 'CASE-AAAA1111_report.pdf')
       )
+    })
+
+    it('shows an error message when the download fails', async () => {
+      vi.spyOn(apiClient, 'getCase').mockResolvedValue(SAMPLE_CASE)
+      vi.spyOn(apiClient, 'listReports').mockResolvedValue([
+        {
+          id: 'report-1',
+          case_id: 'case-1',
+          format: 'pdf',
+          file_size_bytes: 51200,
+          created_at: '2026-01-02T00:00:00Z',
+        },
+      ])
+      vi.spyOn(apiClient, 'downloadReport').mockRejectedValue(new Error('Not authenticated.'))
+      renderCaseDetail()
+      const user = userEvent.setup()
+
+      await screen.findByText('pdf')
+      await user.click(screen.getByRole('button', { name: 'Download →' }))
+
+      expect(await screen.findByText('Not authenticated.')).toBeInTheDocument()
     })
 
     it('generates a PDF report and refreshes the report list', async () => {

@@ -33,38 +33,54 @@ class _Bootstrap extends StatefulWidget {
 }
 
 class _BootstrapState extends State<_Bootstrap> {
-  late Future<ApiClient> _apiFuture;
+  late Future<_BootstrapResult> _bootstrapFuture;
 
   @override
   void initState() {
     super.initState();
-    _apiFuture = ApiClient.create();
+    _bootstrapFuture = _bootstrap();
+  }
+
+  Future<_BootstrapResult> _bootstrap() async {
+    final api = await ApiClient.create();
+    // Mirrors AuthContext.jsx's refreshUser(): a stored token isn't the same as a valid
+    // session — it could be expired, or the account could have been deleted since. Only
+    // start on the app shell if /auth/me actually confirms the session is still good.
+    final user = await api.getCurrentUserOrNull();
+    return _BootstrapResult(api: api, startAuthenticated: user != null);
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<ApiClient>(
-      future: _apiFuture,
+    return FutureBuilder<_BootstrapResult>(
+      future: _bootstrapFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
-        final api = snapshot.data!;
+        final result = snapshot.data!;
         return Navigator(
           onGenerateRoute: (settings) {
             Widget page;
             switch (settings.name) {
               case '/dashboard':
-                page = AppShell(api: api);
+                page = AppShell(api: result.api);
                 break;
               case '/':
               default:
-                page = const LoginScreen();
+                page = LoginScreen(api: result.api);
             }
             return MaterialPageRoute(builder: (_) => page, settings: settings);
           },
+          initialRoute: result.startAuthenticated ? '/dashboard' : '/',
         );
       },
     );
   }
+}
+
+class _BootstrapResult {
+  final ApiClient api;
+  final bool startAuthenticated;
+  _BootstrapResult({required this.api, required this.startAuthenticated});
 }

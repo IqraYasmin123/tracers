@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from ... import db as _db  # noqa: F401  (imported first for its sys.path side effect —
 # `database` isn't importable until this runs; see app/db.py's docstring)
-from database.models import AIResult, Case, CaseStatus, Evidence, Verdict
+from database.models import AIResult, Case, CaseStatus, Evidence, User, Verdict
 
 from ...config import settings
 from ...db import get_db
@@ -30,7 +30,8 @@ from ...schemas.cases import (
     EvidenceSummary,
 )
 from ...services.pipeline_service import TracerPipelineService
-from ...services.system_user import get_or_create_system_user
+from ...auth.dependencies import require_investigator_or_above, require_viewer_or_above
+from ...auth.audit import write_audit_log
 
 router = APIRouter()
 
@@ -53,7 +54,9 @@ def _to_case_response(case: Case) -> CaseResponse:
 
 
 @router.get("/cases/stats", response_model=CaseStatsResponse)
-def get_case_stats(db: Session = Depends(get_db)) -> CaseStatsResponse:
+def get_case_stats(
+    db: Session = Depends(get_db), _user: User = Depends(require_viewer_or_above)
+) -> CaseStatsResponse:
     rows = db.query(Case.status, func.count(Case.id)).group_by(Case.status).all()
     counts = {status.value: 0 for status in CaseStatus}
     for status, count in rows:
@@ -80,17 +83,28 @@ def get_case_stats(db: Session = Depends(get_db)) -> CaseStatsResponse:
 
 
 @router.post("/cases", response_model=CaseResponse, status_code=201)
-def create_case(payload: CaseCreate, db: Session = Depends(get_db)) -> CaseResponse:
-    system_user = get_or_create_system_user(db)
-
+def create_case(
+    payload: CaseCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator_or_above),
+) -> CaseResponse:
     case = Case(
         case_number=f"CASE-{uuid.uuid4().hex[:8].upper()}",
         title=payload.title,
         description=payload.description,
         status=CaseStatus.OPEN,
-        created_by=system_user.id,
+        created_by=current_user.id,
     )
     db.add(case)
+    db.flush()
+    write_audit_log(
+        db,
+        user_id=current_user.id,
+        action="case_created",
+        resource_type="case",
+        resource_id=case.id,
+        details={"title": case.title},
+    )
     db.commit()
     db.refresh(case)
     return _to_case_response(case)
@@ -100,6 +114,7 @@ def create_case(payload: CaseCreate, db: Session = Depends(get_db)) -> CaseRespo
 def list_cases(
     status: Optional[CaseStatus] = Query(None, description="Filter by case status"),
     db: Session = Depends(get_db),
+    _user: User = Depends(require_viewer_or_above),
 ) -> list[CaseResponse]:
     query = db.query(Case).options(joinedload(Case.evidence))
     if status is not None:
@@ -109,7 +124,9 @@ def list_cases(
 
 
 @router.get("/cases/{case_id}", response_model=CaseDetailResponse)
-def get_case(case_id: str, db: Session = Depends(get_db)) -> CaseDetailResponse:
+def get_case(
+    case_id: str, db: Session = Depends(get_db), _user: User = Depends(require_viewer_or_above)
+) -> CaseDetailResponse:
     case = (
         db.query(Case)
         .options(joinedload(Case.evidence).joinedload(Evidence.ai_result))
@@ -136,7 +153,12 @@ def get_case(case_id: str, db: Session = Depends(get_db)) -> CaseDetailResponse:
 
 
 @router.patch("/cases/{case_id}", response_model=CaseResponse)
-def update_case(case_id: str, payload: CaseUpdate, db: Session = Depends(get_db)) -> CaseResponse:
+def update_case(
+    case_id: str,
+    payload: CaseUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator_or_above),
+) -> CaseResponse:
     case = db.query(Case).options(joinedload(Case.evidence)).filter(Case.id == case_id).first()
     if case is None:
         raise HTTPException(status_code=404, detail=f"Case '{case_id}' not found.")
@@ -145,6 +167,14 @@ def update_case(case_id: str, payload: CaseUpdate, db: Session = Depends(get_db)
     for field, value in updates.items():
         setattr(case, field, value)
 
+    write_audit_log(
+        db,
+        user_id=current_user.id,
+        action="case_updated",
+        resource_type="case",
+        resource_id=case.id,
+        details=updates,
+    )
     db.commit()
     db.refresh(case)
     return _to_case_response(case)
@@ -157,6 +187,7 @@ async def attach_evidence(
     caption: Optional[str] = Form(default=None),
     db: Session = Depends(get_db),
     pipeline: TracerPipelineService = Depends(get_pipeline_service),
+    current_user: User = Depends(require_investigator_or_above),
 ) -> EvidenceSummary:
     """Runs the real AI pipeline server-side and persists both the evidence file and its
     AI result — the verdict is always computed here, never accepted from the client, so a
@@ -180,8 +211,6 @@ async def attach_evidence(
         )
 
     result = pipeline.analyze(image_bytes, caption=caption)
-
-    system_user = get_or_create_system_user(db)
 
     case_dir = Path(settings.evidence_storage_dir) / case.id
     case_dir.mkdir(parents=True, exist_ok=True)
@@ -209,7 +238,7 @@ async def attach_evidence(
         sha256_hash=result["sha256_hash"],
         mime_type=file.content_type,
         file_size_bytes=len(image_bytes),
-        uploaded_by=system_user.id,
+        uploaded_by=current_user.id,
     )
     db.add(evidence)
     db.flush()  # assigns evidence.id without ending the transaction
@@ -228,6 +257,14 @@ async def attach_evidence(
         processing_time_ms=result["processing_time_ms"],
     )
     db.add(ai_result)
+    write_audit_log(
+        db,
+        user_id=current_user.id,
+        action="evidence_attached",
+        resource_type="evidence",
+        resource_id=evidence.id,
+        details={"case_id": case.id, "verdict": result["verdict"], "filename": original_name},
+    )
     db.commit()
     db.refresh(evidence)
 

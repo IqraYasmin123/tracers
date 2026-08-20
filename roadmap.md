@@ -19,9 +19,9 @@ the next one begins.
 | 12 | Analytics Dashboard | Client layer | ✅ Done (60/60 tests; live session stats + historical Module 5 metrics + honest placeholders; found & fixed missing SessionProvider mount / unwired Investigation recording — see docs/module12_analytics.md) |
 | 13 | Case Management | API + Client | ✅ Done (25 backend + 29 new frontend tests, 90 total frontend; real cases/evidence CRUD wired to Module 10's schema; server always re-runs AI pipeline, never trusts client-reported verdicts; fixed a real import-order bug pytest missed but uvicorn caught — see docs/module13_case_management.md) |
 | 14 | Report Generator | AI engine + API | ✅ Done (35 backend + 99 total frontend tests; real PDF/DOCX generation via reportlab + python-docx; fixed a Module 13 gap where attribution heatmaps were never persisted — see docs/module14_report_generator.md) |
-| 15 | Mobile Application (Flutter) | Client layer | 🔶 Code written, unverified — no Flutter tooling available to compile/test/run it; see docs/module15_mobile.md for exactly what was and wasn't checked |
-| 16 | Security & Authentication | API layer | ⬜ |
-| 17 | System Testing | Cross-cutting | ⬜ |
+| 15 | Mobile Application (Flutter) | Client layer | ✅ Verified working (Dashboard, Investigation with real analysis, Save to Case, Case Detail all confirmed via real screenshots on Chrome web target; two real bugs found via testing and fixed: dart:io.File incompatible with Flutter Web, and a swallowed-error bug in ApiClient — see docs/module15_mobile.md) |
+| 16 | Security & Authentication | API layer | ✅ Done (54 backend + 109 frontend tests; real bcrypt/JWT auth, RBAC, one-time randomly-generated admin bootstrap, AuditLog finally activated; found & fixed the Module 13 import-order bug recurring in 2 new files, plus a live report-download regression in both React and mobile once downloads required auth — see docs/module16_security_auth.md) |
+| 17 | System Testing | Cross-cutting | ⬜ Next |
 | 18 | Deployment & Documentation | Cross-cutting | ⬜ |
 
 ## Suggested Timeline (16 weeks)

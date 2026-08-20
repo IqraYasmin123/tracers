@@ -1,14 +1,19 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { ApiError } from '../api/client'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function Login() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
+  const [loginError, setLoginError] = useState(null)
 
   function validate() {
     const next = {}
@@ -19,20 +24,26 @@ export default function Login() {
     return next
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
     const validationErrors = validate()
     setErrors(validationErrors)
+    setLoginError(null)
     if (Object.keys(validationErrors).length > 0) return
 
-    // Real authentication (JWT issued by the backend) arrives in Module 16. For now, this
-    // validates real input honestly and then proceeds — not wired to a fake "always
-    // succeeds" backend call, since that would be more misleading than just being direct
-    // about what's implemented yet.
     setSubmitting(true)
-    setTimeout(() => {
-      navigate('/dashboard')
-    }, 400)
+    try {
+      // Real authentication (Module 16): a real backend call, a real JWT stored, and the
+      // logged-in user's actual role — not the placeholder that used to just navigate
+      // after a fake delay.
+      await login(email.trim(), password)
+      const redirectTo = location.state?.from?.pathname || '/dashboard'
+      navigate(redirectTo, { replace: true })
+    } catch (err) {
+      setLoginError(err instanceof ApiError ? err.message : 'Could not sign in. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -91,6 +102,12 @@ export default function Login() {
             )}
           </div>
 
+          {loginError && (
+            <div className="rounded-md border border-verdict-adversarial/30 bg-verdict-adversarial/10 p-3 font-sans text-sm text-verdict-adversarial">
+              {loginError}
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={submitting}
@@ -100,7 +117,7 @@ export default function Login() {
           </button>
 
           <p className="text-center font-mono text-[11px] text-muted">
-            Full authentication arrives in Module 16
+            Accounts are provisioned by an administrator — no public sign-up.
           </p>
         </form>
       </div>

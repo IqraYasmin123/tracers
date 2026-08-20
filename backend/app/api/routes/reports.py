@@ -15,13 +15,14 @@ from sqlalchemy.orm import Session, joinedload
 
 from ... import db as _db  # noqa: F401  (imported first for its sys.path side effect —
 # `database` isn't importable until this runs; see app/db.py's docstring)
-from database.models import Case, Evidence, Report, ReportFormat
+from database.models import Case, Evidence, Report, ReportFormat, User
 
 from ...config import settings
 from ...db import get_db
 from ...schemas.reports import ReportCreate, ReportResponse
 from ...services.report_service import generate_docx_report, generate_pdf_report
-from ...services.system_user import get_or_create_system_user
+from ...auth.dependencies import require_investigator_or_above, require_viewer_or_above
+from ...auth.audit import write_audit_log
 
 router = APIRouter()
 
@@ -58,10 +59,12 @@ def _load_case_with_evidence(db: Session, case_id: str) -> Case:
 
 @router.post("/cases/{case_id}/reports", response_model=ReportResponse, status_code=201)
 def create_report(
-    case_id: str, payload: ReportCreate, db: Session = Depends(get_db)
+    case_id: str,
+    payload: ReportCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator_or_above),
 ) -> ReportResponse:
     case = _load_case_with_evidence(db, case_id)
-    system_user = get_or_create_system_user(db)
 
     report_id = uuid.uuid4().hex
     extension = "pdf" if payload.format == ReportFormat.PDF else "docx"
@@ -74,11 +77,20 @@ def create_report(
 
     report = Report(
         case_id=case.id,
-        generated_by=system_user.id,
+        generated_by=current_user.id,
         file_path=str(output_path),
         format=payload.format,
     )
     db.add(report)
+    db.flush()
+    write_audit_log(
+        db,
+        user_id=current_user.id,
+        action="report_generated",
+        resource_type="report",
+        resource_id=report.id,
+        details={"case_id": case.id, "format": payload.format.value},
+    )
     db.commit()
     db.refresh(report)
 
@@ -86,7 +98,9 @@ def create_report(
 
 
 @router.get("/cases/{case_id}/reports", response_model=list[ReportResponse])
-def list_reports(case_id: str, db: Session = Depends(get_db)) -> list[ReportResponse]:
+def list_reports(
+    case_id: str, db: Session = Depends(get_db), _user: User = Depends(require_viewer_or_above)
+) -> list[ReportResponse]:
     _load_case_with_evidence(db, case_id)  # 404s if the case doesn't exist
     reports = (
         db.query(Report)
@@ -98,7 +112,12 @@ def list_reports(case_id: str, db: Session = Depends(get_db)) -> list[ReportResp
 
 
 @router.get("/cases/{case_id}/reports/{report_id}/download")
-def download_report(case_id: str, report_id: str, db: Session = Depends(get_db)) -> FileResponse:
+def download_report(
+    case_id: str,
+    report_id: str,
+    db: Session = Depends(get_db),
+    _user: User = Depends(require_viewer_or_above),
+) -> FileResponse:
     report = (
         db.query(Report).filter(Report.id == report_id, Report.case_id == case_id).first()
     )

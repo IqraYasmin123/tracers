@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import Investigation from './Investigation'
 import * as apiClient from '../api/client'
 import { SessionProvider } from '../context/SessionContext'
+import { AuthProvider } from '../context/AuthContext'
 
 // Topbar independently calls checkHealth on mount — stub it so tests don't depend on it.
 vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'ok' })
@@ -12,9 +13,11 @@ vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'ok' })
 function renderInvestigation() {
   return render(
     <MemoryRouter>
-      <SessionProvider>
-        <Investigation />
-      </SessionProvider>
+      <AuthProvider>
+        <SessionProvider>
+          <Investigation />
+        </SessionProvider>
+      </AuthProvider>
     </MemoryRouter>
   )
 }

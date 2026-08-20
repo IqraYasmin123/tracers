@@ -232,3 +232,21 @@ class ReportSummary {
         createdAt: DateTime.parse(json['created_at'] as String),
       );
 }
+
+/// The logged-in user's own profile (Module 16). Mirrors backend/app/schemas/auth.py's
+/// UserResponse exactly.
+class UserProfile {
+  final String id;
+  final String username;
+  final String email;
+  final String role;
+
+  UserProfile({required this.id, required this.username, required this.email, required this.role});
+
+  factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
+        id: json['id'] as String,
+        username: json['username'] as String,
+        email: json['email'] as String,
+        role: json['role'] as String,
+      );
+}

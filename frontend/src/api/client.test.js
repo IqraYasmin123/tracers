@@ -11,7 +11,13 @@ import {
   getCaseStats,
   listReports,
   generateReport,
-  getReportDownloadUrl,
+  downloadReport,
+  login,
+  logout,
+  getCurrentUser,
+  getStoredToken,
+  setStoredToken,
+  clearStoredToken,
 } from './client'
 
 describe('checkHealth', () => {
@@ -231,9 +237,107 @@ describe('Report generation API (Module 14)', () => {
     )
   })
 
-  it('getReportDownloadUrl builds the correct download URL without fetching', () => {
-    const url = getReportDownloadUrl('case-1', 'report-1')
-    expect(url).toContain('/api/v1/cases/case-1/reports/report-1/download')
-    expect(global.fetch).not.toHaveBeenCalled()
+  it('downloadReport fetches with the auth header and triggers a save, not a bare href', async () => {
+    setStoredToken('test-token')
+    const mockBlob = new Blob(['pdf bytes'], { type: 'application/pdf' })
+    global.fetch.mockResolvedValue({ ok: true, blob: async () => mockBlob })
+
+    const clickSpy = vi.fn()
+    const originalCreateElement = document.createElement.bind(document)
+    vi.spyOn(document, 'createElement').mockImplementation((tag) => {
+      const el = originalCreateElement(tag)
+      if (tag === 'a') el.click = clickSpy
+      return el
+    })
+
+    await downloadReport('case-1', 'report-1', 'my_report.pdf')
+
+    const [url, options] = global.fetch.mock.calls[0]
+    expect(String(url)).toContain('/api/v1/cases/case-1/reports/report-1/download')
+    expect(options.headers.Authorization).toBe('Bearer test-token')
+    expect(clickSpy).toHaveBeenCalled()
+    clearStoredToken()
+  })
+
+  it('downloadReport throws a clear ApiError on failure', async () => {
+    global.fetch.mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({ detail: "Report 'report-1' not found." }),
+    })
+    await expect(downloadReport('case-1', 'report-1')).rejects.toThrow(
+      "Report 'report-1' not found."
+    )
+  })
+})
+
+describe('Auth API (Module 16)', () => {
+  beforeEach(() => {
+    global.fetch = vi.fn()
+    clearStoredToken()
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+    clearStoredToken()
+  })
+
+  it('login sends form-urlencoded credentials, not JSON (matches OAuth2PasswordRequestForm)', async () => {
+    global.fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ access_token: 'abc123', token_type: 'bearer', expires_in_minutes: 480 }),
+    })
+    await login('someone@example.com', 'hunter2pass')
+
+    const [url, options] = global.fetch.mock.calls[0]
+    expect(String(url)).toContain('/api/v1/auth/login')
+    expect(options.headers['Content-Type']).toBe('application/x-www-form-urlencoded')
+    expect(options.body.toString()).toContain('username=someone%40example.com')
+    expect(options.body.toString()).toContain('password=hunter2pass')
+  })
+
+  it('login stores the returned token', async () => {
+    global.fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ access_token: 'stored-token-value', token_type: 'bearer', expires_in_minutes: 480 }),
+    })
+    await login('someone@example.com', 'hunter2pass')
+    expect(getStoredToken()).toBe('stored-token-value')
+  })
+
+  it('login throws a clear ApiError with the backend detail on invalid credentials', async () => {
+    global.fetch.mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ detail: 'Incorrect username or password.' }),
+    })
+    await expect(login('someone@example.com', 'wrong')).rejects.toThrow(
+      'Incorrect username or password.'
+    )
+  })
+
+  it('logout clears the stored token', async () => {
+    setStoredToken('some-token')
+    logout()
+    expect(getStoredToken()).toBeNull()
+  })
+
+  it('getCurrentUser sends the stored token as a bearer header', async () => {
+    setStoredToken('my-token')
+    global.fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: '1', username: 'alice', email: 'a@example.com', role: 'admin' }),
+    })
+    await getCurrentUser()
+    const [, options] = global.fetch.mock.calls[0]
+    expect(options.headers.Authorization).toBe('Bearer my-token')
+  })
+
+  it('getCurrentUser throws a clear ApiError on a 401', async () => {
+    global.fetch.mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ detail: 'Not authenticated.' }),
+    })
+    await expect(getCurrentUser()).rejects.toThrow('Not authenticated.')
   })
 })

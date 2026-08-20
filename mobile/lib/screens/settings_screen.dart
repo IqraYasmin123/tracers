@@ -82,6 +82,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ],
+          const SizedBox(height: 32),
+          const Divider(color: TracerColors.hairline),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () async {
+                await widget.api.logout();
+                if (context.mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+                }
+              },
+              style: OutlinedButton.styleFrom(foregroundColor: TracerColors.verdictAdversarial),
+              child: const Text('Log out'),
+            ),
+          ),
         ],
       ),
     );

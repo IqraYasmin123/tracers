@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import Analytics from './Analytics'
 import { SessionProvider } from '../context/SessionContext'
+import { AuthProvider } from '../context/AuthContext'
 import * as apiClient from '../api/client'
 
 vi.spyOn(apiClient, 'checkHealth').mockResolvedValue({ status: 'ok' })
@@ -22,9 +23,11 @@ vi.spyOn(apiClient, 'getCaseStats').mockResolvedValue({
 function renderAnalytics() {
   return render(
     <MemoryRouter>
-      <SessionProvider>
-        <Analytics />
-      </SessionProvider>
+      <AuthProvider>
+        <SessionProvider>
+          <Analytics />
+        </SessionProvider>
+      </AuthProvider>
     </MemoryRouter>
   )
 }

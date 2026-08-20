@@ -32,24 +32,81 @@ class ApiException implements Exception {
 /// same endpoints, same request/response shapes, so behavior stays consistent across
 /// clients rather than the mobile app inventing its own contract.
 class ApiClient {
-  static const _prefsKey = 'tracer.api_base_url';
+  static const _baseUrlPrefsKey = 'tracer.api_base_url';
+  static const _tokenPrefsKey = 'tracer.auth_token';
   static const _defaultBaseUrl = 'http://10.0.2.2:8000'; // Android emulator's alias for
   // the host machine's localhost. iOS simulator and physical devices need a real LAN IP —
   // see docs/module15_mobile.md for how to change this from the Settings screen.
 
   String baseUrl;
-  ApiClient._(this.baseUrl);
+  String? _token;
+  ApiClient._(this.baseUrl, this._token);
 
   static Future<ApiClient> create() async {
     final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString(_prefsKey);
-    return ApiClient._(saved ?? _defaultBaseUrl);
+    final savedUrl = prefs.getString(_baseUrlPrefsKey);
+    final savedToken = prefs.getString(_tokenPrefsKey);
+    return ApiClient._(savedUrl ?? _defaultBaseUrl, savedToken);
   }
 
   Future<void> setBaseUrl(String url) async {
     baseUrl = url;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, url);
+    await prefs.setString(_baseUrlPrefsKey, url);
+  }
+
+  bool get isAuthenticated => _token != null;
+
+  Map<String, String> _authHeaders() =>
+      _token != null ? {'Authorization': 'Bearer $_token'} : {};
+
+  /// Real authentication (Module 16). Mirrors frontend/src/api/client.js's login() exactly
+  /// — the backend's /auth/login expects application/x-www-form-urlencoded
+  /// (FastAPI's OAuth2PasswordRequestForm), which `http.post` produces automatically when
+  /// `body` is a plain Map<String, String>, not JSON.
+  Future<void> login(String usernameOrEmail, String password) async {
+    http.Response response;
+    try {
+      response = await http
+          .post(
+            Uri.parse('$baseUrl/api/v1/auth/login'),
+            body: {'username': usernameOrEmail, 'password': password},
+          )
+          .timeout(const Duration(seconds: 15));
+    } on Exception catch (e) {
+      throw ApiException('Could not reach the TRACER backend at $baseUrl. ($e)', 0);
+    }
+    final body = _decodeOrThrow(response);
+    _token = body['access_token'] as String;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenPrefsKey, _token!);
+  }
+
+  Future<void> logout() async {
+    _token = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenPrefsKey);
+  }
+
+  /// Validates the stored token against the backend — a token can be expired or its
+  /// account deleted since it was issued, so "a token is stored locally" isn't the same
+  /// as "the session is actually still valid". Returns null (not throwing) on any
+  /// failure, since the caller (main.dart's bootstrap) just needs a yes/no to decide
+  /// whether to show Login or the app shell.
+  Future<UserProfile?> getCurrentUserOrNull() async {
+    if (_token == null) return null;
+    try {
+      final response = await http
+          .get(Uri.parse('$baseUrl/api/v1/auth/me'), headers: _authHeaders())
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) {
+        await logout(); // stale/invalid token — don't keep sending it on every request
+        return null;
+      }
+      return UserProfile.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
   }
 
   Map<String, dynamic> _decodeOrThrow(http.Response response) {
@@ -114,10 +171,10 @@ class ApiClient {
   }
 
   Future<CaseSummary> updateCaseStatus(String caseId, String status) async {
-    final uri = Uri.parse('$baseUrl/api/v1/cases/$caseId');
-    final response = await http
-        .patch(uri, headers: {'Content-Type': 'application/json'}, body: jsonEncode({'status': status}))
-        .timeout(const Duration(seconds: 15));
+    final response = await _patch(
+      Uri.parse('$baseUrl/api/v1/cases/$caseId'),
+      body: {'status': status},
+    );
     return CaseSummary.fromJson(_decodeOrThrow(response));
   }
 
@@ -158,8 +215,31 @@ class ApiClient {
     return ReportSummary.fromJson(_decodeOrThrow(response));
   }
 
-  String reportDownloadUrl(String caseId, String reportId) =>
-      '$baseUrl/api/v1/cases/$caseId/reports/$reportId/download';
+  /// Fetches the report file with the auth header the download endpoint now requires
+  /// (Module 16) — a bare URL opened externally (e.g. via url_launcher) can't carry an
+  /// Authorization header, so that approach silently breaks once auth is required.
+  Future<Uint8List> downloadReportBytes(String caseId, String reportId) async {
+    http.Response response;
+    try {
+      response = await http
+          .get(
+            Uri.parse('$baseUrl/api/v1/cases/$caseId/reports/$reportId/download'),
+            headers: _authHeaders(),
+          )
+          .timeout(const Duration(seconds: 30));
+    } on Exception catch (e) {
+      throw ApiException('Could not reach the TRACER backend at $baseUrl. ($e)', 0);
+    }
+    if (response.statusCode != 200) {
+      String detail = 'Failed to download report (status ${response.statusCode}).';
+      try {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        if (body['detail'] is String) detail = body['detail'] as String;
+      } catch (_) {}
+      throw ApiException(detail, response.statusCode);
+    }
+    return response.bodyBytes;
+  }
 
   // --- internal helpers: consistent timeouts + a clear error when the backend is simply
   // unreachable, rather than an opaque SocketException bubbling up to the UI. The real
@@ -168,7 +248,7 @@ class ApiClient {
 
   Future<http.Response> _get(Uri uri) async {
     try {
-      return await http.get(uri).timeout(const Duration(seconds: 15));
+      return await http.get(uri, headers: _authHeaders()).timeout(const Duration(seconds: 15));
     } on Exception catch (e) {
       throw ApiException('Could not reach the TRACER backend at $baseUrl. ($e)', 0);
     }
@@ -177,8 +257,26 @@ class ApiClient {
   Future<http.Response> _post(Uri uri, {required Map<String, dynamic> body}) async {
     try {
       return await http
-          .post(uri, headers: {'Content-Type': 'application/json'}, body: jsonEncode(body))
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json', ..._authHeaders()},
+            body: jsonEncode(body),
+          )
           .timeout(const Duration(seconds: 60)); // report generation can take a few seconds
+    } on Exception catch (e) {
+      throw ApiException('Could not reach the TRACER backend at $baseUrl. ($e)', 0);
+    }
+  }
+
+  Future<http.Response> _patch(Uri uri, {required Map<String, dynamic> body}) async {
+    try {
+      return await http
+          .patch(
+            uri,
+            headers: {'Content-Type': 'application/json', ..._authHeaders()},
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 15));
     } on Exception catch (e) {
       throw ApiException('Could not reach the TRACER backend at $baseUrl. ($e)', 0);
     }
@@ -186,6 +284,7 @@ class ApiClient {
 
   Future<http.StreamedResponse> _send(http.MultipartRequest request) async {
     try {
+      request.headers.addAll(_authHeaders());
       return await request.send().timeout(const Duration(seconds: 60));
     } on Exception catch (e) {
       throw ApiException('Could not reach the TRACER backend at $baseUrl. ($e)', 0);
