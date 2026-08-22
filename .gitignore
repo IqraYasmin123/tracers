@@ -57,3 +57,9 @@ Thumbs.db
 # --- Logs ---
 *.log
 logs/
+
+# --- Generated case reports (Module 14) ---
+backend/data/reports/
+
+# --- Local DB backups ---
+*.db.bak
