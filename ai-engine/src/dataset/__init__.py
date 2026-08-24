@@ -16,6 +16,7 @@ Example:
     >>> sample["image"], sample["caption"]
 """
 from .base import BaseDataset
+from .coco_dataset import CocoDataset
 from .config import DatasetConfig
 from .exceptions import DatasetLoadError
 from .flickr_dataset import FlickrDataset
@@ -25,6 +26,7 @@ from .visualize import show_samples
 __all__ = [
     "BaseDataset",
     "FlickrDataset",
+    "CocoDataset",
     "DatasetConfig",
     "DatasetLoadError",
     "split_indices",
