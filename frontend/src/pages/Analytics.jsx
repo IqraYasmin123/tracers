@@ -17,17 +17,44 @@ import {
 } from '../utils/analytics'
 
 /**
- * Real, offline evaluation metrics from Module 5's Adversarial Detection Engine —
+ * Real, offline evaluation metrics from Module 5's Adversarial Detection Engine --
  * NOT computed live. Ground-truth accuracy/AUC/etc. require a labeled evaluation set,
  * which arbitrary uploads on the Investigation page don't have. Rather than fabricate a
- * live-looking metric, these are the actual numbers from that module's test run, clearly
- * labeled as historical. Only fields Module 5 actually reported are shown — precision/
- * recall/F1 aren't listed because they weren't part of that module's verified output.
+ * live-looking metric, these are the actual numbers from a real evaluation run, clearly
+ * labeled as historical.
+ *
+ * Binary Accuracy / AUC below are averaged across the full FGSM/PGD x {2,4,8}/255 sweep
+ * from ai-engine/notebooks/05b_table2_evaluation.ipynb (the "rich" mean+std+cross-layer-delta
+ * feature set -- see ai-engine/src/detection/features.py's extract_rich_features), run on
+ * 1500 real COCO images per row. This REPLACES the single-epsilon (8/255 only) result from
+ * the original 05_detection.ipynb that these numbers used to show.
+ *
+ * Important: accuracy varies a LOT by attack type and epsilon -- it is NOT one flat number.
+ * Real per-row range: FGSM@8/255 approx 99% down to PGD@2/255 approx 53% (barely above
+ * chance; this remains a known, unresolved weak point). The average below is a summary,
+ * not the whole picture -- see the notebook's own results table for the full breakdown
+ * before citing a single number anywhere.
+ *
+ * Attack-Type Accuracy (3-way clean/FGSM/PGD classification) was NOT re-measured as part of
+ * this evaluation -- it's still the original Module 5 number, kept as-is rather than
+ * replaced with something we didn't actually verify.
  */
 const HISTORICAL_DETECTOR_METRICS = [
-  { label: 'Binary Accuracy', value: '86%', note: 'clean vs. adversarial' },
-  { label: 'AUC', value: '0.95', note: 'binary classification' },
-  { label: 'Attack-Type Accuracy', value: '74%', note: 'attack family classification' },
+  {
+    label: 'Binary Accuracy',
+    value: '84%',
+    note: 'avg. across FGSM/PGD x 2,4,8/255 -- see 05b_table2_evaluation.ipynb',
+  },
+  {
+    label: 'AUC',
+    value: '0.88',
+    note: 'avg., same evaluation -- ranges 0.55 (PGD@2/255) to 1.00 (FGSM@8/255)',
+  },
+  {
+    label: 'Attack-Type Accuracy',
+    value: '74%',
+    note: 'attack family classification (Module 5 baseline, not re-measured here)',
+  },
 ]
 
 function StatCard({ label, value, note }) {
@@ -56,7 +83,7 @@ export default function Analytics() {
   const { sessions, clearSessions } = useSession()
   const [confirmingClear, setConfirmingClear] = useState(false)
 
-  // Case Statistics (Module 13) — real, but scoped to every case/evidence in the database,
+  // Case Statistics (Module 13) -- real, but scoped to every case/evidence in the database,
   // not this browser's session. Fetched independently from the live session data above so
   // a backend hiccup here doesn't block the (always-available) session-derived panels.
   const [caseStats, setCaseStats] = useState(null)
@@ -90,7 +117,7 @@ export default function Analytics() {
         <p className="font-sans text-sm text-muted">
           Computed live from the <span className="text-ink">{verdictCounts.total}</span> real
           analys{verdictCounts.total === 1 ? 'is' : 'es'} you've run on this browser via the
-          Investigation page — nothing here is fabricated.
+          Investigation page -- nothing here is fabricated.
         </p>
         {sessions.length > 0 && (
           <button
@@ -113,7 +140,7 @@ export default function Analytics() {
             href="/investigation"
             className="mt-3 inline-block font-mono text-sm text-cyan hover:underline"
           >
-            Run a real analysis on the Investigation page →
+            Run a real analysis on the Investigation page -&gt;
           </a>
         </div>
       )}
@@ -125,7 +152,7 @@ export default function Analytics() {
         <StatCard label="Adversarial" value={verdictCounts.adversarial} />
         <StatCard
           label="Avg. Confidence"
-          value={avgConfidence !== null ? formatConfidence(avgConfidence) : '—'}
+          value={avgConfidence !== null ? formatConfidence(avgConfidence) : '--'}
         />
       </div>
 
@@ -149,7 +176,7 @@ export default function Analytics() {
         <Panel title="Processing Time" subtitle="live">
           <div className="flex h-[120px] flex-col items-center justify-center">
             <div className="font-mono text-3xl font-semibold text-ink">
-              {avgProcessingTime !== null ? formatProcessingTime(avgProcessingTime) : '—'}
+              {avgProcessingTime !== null ? formatProcessingTime(avgProcessingTime) : '--'}
             </div>
             <div className="mt-1 font-sans text-sm text-muted">average per analysis</div>
           </div>
@@ -162,9 +189,9 @@ export default function Analytics() {
         </Panel>
       </div>
 
-      {/* Historical model evaluation — clearly separated from live session data above */}
+      {/* Historical model evaluation -- clearly separated from live session data above */}
       <div className="mt-6">
-        <Panel title="Detector Model Performance" subtitle="historical — Module 5 offline evaluation">
+        <Panel title="Detector Model Performance" subtitle="historical -- Module 5 offline evaluation">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {HISTORICAL_DETECTOR_METRICS.map((m) => (
               <div key={m.label}>
@@ -177,7 +204,7 @@ export default function Analytics() {
         </Panel>
       </div>
 
-      {/* Honest placeholders — same pattern as Module 11's Dashboard */}
+      {/* Honest placeholders -- same pattern as Module 11's Dashboard */}
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         <div className="rounded-lg border border-hairline bg-panel p-4">
           <div className="mb-2 flex items-baseline justify-between">
@@ -185,7 +212,7 @@ export default function Analytics() {
               Case Statistics
             </div>
             <div className="font-mono text-[11px] text-muted">
-              live — every case in the database
+              live -- every case in the database
             </div>
           </div>
           {caseStatsError && (
@@ -194,7 +221,7 @@ export default function Analytics() {
             </p>
           )}
           {!caseStats && !caseStatsError && (
-            <p className="font-sans text-sm text-muted">Loading…</p>
+            <p className="font-sans text-sm text-muted">Loading...</p>
           )}
           {caseStats && (
             <div className="grid grid-cols-2 gap-3">

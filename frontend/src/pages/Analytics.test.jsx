@@ -64,8 +64,8 @@ describe('Analytics page', () => {
   it('always shows the historical detector metrics, even with no live data', () => {
     renderAnalytics()
     expect(screen.getByText('Binary Accuracy')).toBeInTheDocument()
-    expect(screen.getByText('86%')).toBeInTheDocument()
-    expect(screen.getByText('0.95')).toBeInTheDocument()
+    expect(screen.getByText('84%')).toBeInTheDocument()
+    expect(screen.getByText('0.88')).toBeInTheDocument()
   })
 
   it('shows real case statistics from the backend, and the remaining honest placeholder', async () => {

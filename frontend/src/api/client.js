@@ -78,6 +78,20 @@ export async function getCurrentUser() {
   return response.json()
 }
 
+/** Backend returns 204 No Content on success — no JSON body to parse, unlike most other
+ * endpoints here. See backend/app/auth/routes.py's change_my_password(). */
+export async function changePassword(currentPassword, newPassword) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/me/password`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  })
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}))
+    throw new ApiError(body.detail || 'Failed to change password', response.status)
+  }
+}
+
 export async function checkHealth() {
   const response = await fetch(`${API_BASE_URL}/api/v1/health`)
   if (!response.ok) {

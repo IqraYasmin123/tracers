@@ -15,6 +15,7 @@ import {
   login,
   logout,
   getCurrentUser,
+  changePassword,
   getStoredToken,
   setStoredToken,
   clearStoredToken,
@@ -339,5 +340,37 @@ describe('Auth API (Module 16)', () => {
       json: async () => ({ detail: 'Not authenticated.' }),
     })
     await expect(getCurrentUser()).rejects.toThrow('Not authenticated.')
+  })
+
+  it('changePassword sends current and new password as JSON with the bearer token', async () => {
+    setStoredToken('my-token')
+    global.fetch.mockResolvedValue({ ok: true, status: 204 })
+    await changePassword('oldpass123', 'newpass456')
+
+    const [url, options] = global.fetch.mock.calls[0]
+    expect(String(url)).toContain('/api/v1/auth/me/password')
+    expect(options.method).toBe('PATCH')
+    expect(options.headers['Content-Type']).toBe('application/json')
+    expect(options.headers.Authorization).toBe('Bearer my-token')
+    expect(JSON.parse(options.body)).toEqual({
+      current_password: 'oldpass123',
+      new_password: 'newpass456',
+    })
+  })
+
+  it('changePassword does not try to parse a body on the 204 success response', async () => {
+    global.fetch.mockResolvedValue({ ok: true, status: 204 })
+    await expect(changePassword('oldpass123', 'newpass456')).resolves.toBeUndefined()
+  })
+
+  it('changePassword throws a clear ApiError with the backend detail on a wrong current password', async () => {
+    global.fetch.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ detail: 'Current password is incorrect.' }),
+    })
+    await expect(changePassword('wrongold', 'newpass456')).rejects.toThrow(
+      'Current password is incorrect.'
+    )
   })
 })
