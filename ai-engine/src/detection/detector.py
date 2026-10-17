@@ -5,15 +5,19 @@ Serves two roles in TRACER depending on what labels it's trained with:
     - Binary detector: fit with y in {"clean", "adversarial"}
     - Attack-type classifier: fit with y in {"clean", "fgsm", "pgd"}
 
-Same underlying model both times — this is intentional, not a shortcut. The classification
+Same underlying model both times -- this is intentional, not a shortcut. The classification
 task is the same shape (entropy features -> label) regardless of how many classes there are;
 duplicating the class for "2-class" vs "N-class" would just be copy-pasted code with no real
 difference in behavior.
+
+Backing model is selected via DetectionConfig.classifier_type ("mlp" or "gboost") -- see
+config.py for why gradient boosting is offered as an alternative.
 """
 from __future__ import annotations
 
 import joblib
 import numpy as np
+from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 
@@ -22,18 +26,30 @@ from .config import DetectionConfig
 from .exceptions import DetectionError, DetectorNotFittedError
 
 
+def _build_model(config: DetectionConfig):
+    if config.classifier_type == "gboost":
+        return GradientBoostingClassifier(
+            n_estimators=config.n_estimators,
+            max_depth=config.max_depth,
+            learning_rate=config.learning_rate,
+            random_state=config.random_state,
+        )
+    return MLPClassifier(
+        hidden_layer_sizes=config.hidden_layer_sizes,
+        max_iter=config.max_iter,
+        random_state=config.random_state,
+    )
+
+
 class EntropyClassifier(BaseDetector):
-    """MLP classifier over attention-entropy feature vectors, with feature scaling and
-    save/load built in."""
+    """Classifier over attention-entropy feature vectors, with feature scaling and
+    save/load built in. Backing model (MLP or gradient boosting) is set by
+    DetectionConfig.classifier_type."""
 
     def __init__(self, config: DetectionConfig | None = None) -> None:
         self.config = config or DetectionConfig()
         self._scaler = StandardScaler()
-        self._model = MLPClassifier(
-            hidden_layer_sizes=self.config.hidden_layer_sizes,
-            max_iter=self.config.max_iter,
-            random_state=self.config.random_state,
-        )
+        self._model = _build_model(self.config)
         self._is_fitted = False
         self.classes_: list = []
 
