@@ -24,16 +24,21 @@ import {
  * labeled as historical.
  *
  * Binary Accuracy / AUC below are averaged across the full FGSM/PGD x {2,4,8}/255 sweep
- * from ai-engine/notebooks/05b_table2_evaluation.ipynb (the "rich" mean+std+cross-layer-delta
- * feature set -- see ai-engine/src/detection/features.py's extract_rich_features), run on
- * 1500 real COCO images per row. This REPLACES the single-epsilon (8/255 only) result from
- * the original 05_detection.ipynb that these numbers used to show.
+ * from ai-engine/notebooks/05b_table2_evaluation.ipynb, using the "rich" mean+std+cross-
+ * layer-delta feature set (see ai-engine/src/detection/features.py's extract_rich_features)
+ * with a gradient-boosting classifier (DetectionConfig(classifier_type="gboost") in
+ * ai-engine/src/detection/config.py), run on 1500 real COCO images per row. This REPLACES
+ * the earlier rich-features-with-MLP result (84%/0.88) these numbers used to show: switching
+ * the classifier to gradient boosting raised the overall average modestly (84% -> 85%,
+ * 0.88 -> 0.90 AUC) and, more importantly, improved the weakest case specifically --
+ * PGD@2/255 went from 53% (rich+MLP) / 56% (original mean-only baseline) to 60% accuracy,
+ * AUC 0.55 -> 0.65.
  *
  * Important: accuracy varies a LOT by attack type and epsilon -- it is NOT one flat number.
- * Real per-row range: FGSM@8/255 approx 99% down to PGD@2/255 approx 53% (barely above
- * chance; this remains a known, unresolved weak point). The average below is a summary,
- * not the whole picture -- see the notebook's own results table for the full breakdown
- * before citing a single number anywhere.
+ * Real per-row range: FGSM@8/255 approx 97% down to PGD@2/255 approx 60% (still close to
+ * chance; this remains a known, unresolved weak point, just a less severe one than before).
+ * The average below is a summary, not the whole picture -- see the notebook's own results
+ * table for the full breakdown before citing a single number anywhere.
  *
  * Attack-Type Accuracy (3-way clean/FGSM/PGD classification) was NOT re-measured as part of
  * this evaluation -- it's still the original Module 5 number, kept as-is rather than
@@ -42,13 +47,13 @@ import {
 const HISTORICAL_DETECTOR_METRICS = [
   {
     label: 'Binary Accuracy',
-    value: '84%',
-    note: 'avg. across FGSM/PGD x 2,4,8/255 -- see 05b_table2_evaluation.ipynb',
+    value: '85%',
+    note: 'avg. across FGSM/PGD x 2,4,8/255, rich features + gboost -- see 05b_table2_evaluation.ipynb',
   },
   {
     label: 'AUC',
-    value: '0.88',
-    note: 'avg., same evaluation -- ranges 0.55 (PGD@2/255) to 1.00 (FGSM@8/255)',
+    value: '0.90',
+    note: 'avg., same evaluation -- ranges 0.65 (PGD@2/255) to 1.00 (FGSM@8/255)',
   },
   {
     label: 'Attack-Type Accuracy',
